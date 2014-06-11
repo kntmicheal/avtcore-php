@@ -1,4 +1,5 @@
-<?
+<?php
+
 /// <summary>
 /// A MenuItem represents a single item in a menu.</summary>
 /// <remarks>A MenuItem is a single "item" in a menu.  Typically a MenuItem will have some <see cref="Text"/>

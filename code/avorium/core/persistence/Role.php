@@ -1,4 +1,5 @@
-<?
+<?php
+
 /**
  * Stellt eine Rolle dar
  * @avtpersistable(name="avtrole")

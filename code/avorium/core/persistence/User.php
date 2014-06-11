@@ -1,4 +1,5 @@
-<?
+<?php
+
 /**
  * Stellt einen Benutzer dar
  * @avtpersistable(name="avtuser")

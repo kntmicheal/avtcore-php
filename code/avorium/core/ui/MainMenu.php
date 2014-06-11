@@ -1,4 +1,4 @@
-<?
+<?php
 
 /// <summary>
 /// Erzeugt alle Menüs

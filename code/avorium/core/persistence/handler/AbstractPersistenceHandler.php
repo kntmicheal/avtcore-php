@@ -1,4 +1,5 @@
-<?
+<?php
+
 require_once($GLOBALS['AvtPersistenceAdapter']);
 
 abstract class avorium_core_persistence_handler_AbstractPersistenceHandler {

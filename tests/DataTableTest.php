@@ -1,6 +1,6 @@
 <?php
 
-require_once '../code/avorium/core/persistence/DataTable.php';
+require_once '../code/avorium/core/ui/DataTable.php';
 
 /**
  * Testet die Funktionalität von DataTable

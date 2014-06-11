@@ -1,4 +1,5 @@
-<?
+<?php
+
 require_once($GLOBALS['AvtPersistenceAdapter']);
 
 // Standard-Handler für Benutzer. Um eine Authentifizierung gegen ein

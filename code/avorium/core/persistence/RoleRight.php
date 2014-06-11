@@ -1,4 +1,5 @@
-<?
+<?php
+
 /**
  * Stellt eine Rollenberechtigung dar
  * @avtpersistable(name="avtroleright")

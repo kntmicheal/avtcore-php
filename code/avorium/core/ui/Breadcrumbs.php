@@ -1,4 +1,4 @@
-<?
+<?php
 
 /// <summary>
 /// Erzeugt eine Brotkrümelnavigation

@@ -24,42 +24,32 @@
  * THE SOFTWARE.
  */
 
-require_once 'helper/Annotation.php';
+require_once '../code/avorium/core/persistence/PersistentObject.php';
 
 /**
- * Base class for all persistent objects
+ * Test class is representing a persistent object. Used in persistence adapter 
+ * tests.
+ * @avtpersistable(name="potest")
  */
-abstract class avorium_core_persistence_PersistentObject {
+class AbstractPersistenceAdapterTestPersistentObject
+extends avorium_core_persistence_PersistentObject {
 
-    /**
-     * Unique identifier of the persistent object
-     * @avtpersistable(name="uuid", type="string", size=40)
-     */
-    public $uuid;
-
-    /**
-     * @var string Name of the database table. Gets read out of the annotation
-     * and is set in the constructor
-     */
-    public $tablename;
-
-    /**
-     * Initializing constructor, e.g.: new User(array("name" => "Ernst"))
-     * @param array $properties Properties to set by default
-     * @return avorium_core_persistence_PersistentObject
-     */
-    public function __construct(array $properties = NULL) {
-        $this->uuid = uniqid('', true);
-        $metaData = avorium_core_persistence_helper_Annotation::getPersistableMetaData($this);
-        $this->tablename = $metaData["name"];
-        if ($properties === NULL) {
-            return;
-        }
-        foreach($properties as $property => $value) {
-            if (property_exists($this, $property)) {
-                    $this->$property = $value;
-            }
-        }
-    }
+	/**
+	 * Represents a boolean value
+	 * @avtpersistable(name="BOOLEAN_VALUE", type="bool")
+	 */
+	public $booleanValue;
+	
+	/**
+	 * Represents an integer value
+	 * @avtpersistable(name="INT_VALUE", type="int")
+	 */
+	public $intValue;
+	
+	/**
+	 * Represents a string value
+	 * @avtpersistable(name="STRING_VALUE", type="string", size=255)
+	 */
+	public $stringValue;
 	
 }

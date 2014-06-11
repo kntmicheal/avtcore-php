@@ -1,4 +1,5 @@
-<?
+<?php
+
 /// <summary>
 /// Erzeugt die Nachrichtenzeile
 /// </summary>
