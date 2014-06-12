@@ -1,10 +1,34 @@
 <?php
 
-require_once 'AbstractPersistenceAdapter.php';
-require_once 'PersistentObject.php';
+/* 
+ * The MIT License
+ *
+ * Copyright 2014 Ronny Hildebrandt <ronny.hildebrandt@avorium.de>.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+require_once dirname(__FILE__).'/AbstractPersistenceAdapter.php';
+require_once dirname(__FILE__).'/PersistentObject.php';
 
 /**
- * Concrete adaptr for MySQL databases
+ * Concrete adapter for MySQL databases
  */
 class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_persistence_AbstractPersistenceAdapter {
     
@@ -39,24 +63,23 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
         $updates = array();
         foreach ($metaData['properties'] as $key => $definition) {
             $name = $this->escape($definition['name']);
-            if ($persistentObject->$key === null) {
-                continue;
-            }
-            $value = $this->escape($persistentObject->$key);
-            $inserts[] = $name;
-            switch($definition['type']) {
-                case 'bool':
-                    $values[] = $value ? 1 : 0;
-                    break;
-                case 'int':
-                    $values[] = $value;
-                    break;
-                case 'long':
-                    $values[] = $value;
-                    break;
-                default:
-                    $values[] = '\''.$value.'\'';
-                    break;
+            if ($persistentObject->$key === null) { // Null-values are transferred to database as they are
+                $inserts[] = $name;
+                $values[] = 'NULL';
+            } else {
+                $value = $this->escape($persistentObject->$key);
+                $inserts[] = $name;
+                switch($definition['type']) {
+                    case 'bool':
+                        $values[] = $value ? 1 : 0;
+                        break;
+                    case 'int':
+                        $values[] = $value;
+                        break;
+                    default:
+                        $values[] = '\''.$value.'\'';
+                        break;
+                }
             }
             if ($name !== 'uuid') {
                 $updates[] = $name.'=VALUES('.$name.')';
@@ -139,4 +162,9 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
                 return $value;
         }
     }
+
+    protected function extractRowFromResultset($resultset) {
+        return $resultset->fetch_object();
+    }
+
 }

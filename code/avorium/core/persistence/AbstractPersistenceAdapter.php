@@ -75,6 +75,9 @@ abstract class avorium_core_persistence_AbstractPersistenceAdapter {
      * class.
      */
     public function getAll($persistentobjectclass) {
+        if (!is_subclass_of($persistentobjectclass, 'avorium_core_persistence_PersistentObject')) {
+            throw new Exception('The given class is not derived from avorium_core_persistence_PersistentObject. But this is needed to extract the table name!');
+        }
         $tablename = $this->escape((new $persistentobjectclass())->tablename);
         $objs = $this->executeMultipleResultQuery('select * from '.$tablename);
         $result = array();
@@ -95,6 +98,9 @@ abstract class avorium_core_persistence_AbstractPersistenceAdapter {
      * @return object Persistent object casted into the given class.
      */
     public function get($persistentobjectclass, $uuid) {
+        if (!is_subclass_of($persistentobjectclass, 'avorium_core_persistence_PersistentObject')) {
+            throw new Exception('The given class is not derived from avorium_core_persistence_PersistentObject. But this is needed to extract the table name!');
+        }
         $tablename = $this->escape((new $persistentobjectclass())->tablename);
         $obj = $this->executeSingleResultQuery('select * from '.$tablename.' where uuid=\''.$this->escape($uuid).'\'');
         return $this->cast($obj, $persistentobjectclass);
@@ -114,12 +120,23 @@ abstract class avorium_core_persistence_AbstractPersistenceAdapter {
      * 
      * @param avorium_core_persistence_PersistentObject $persistentObject
      */
-    public static function delete(avorium_core_persistence_PersistentObject $persistentObject) {
+    public function delete(avorium_core_persistence_PersistentObject $persistentObject) {
         $tableName = $this->escape($persistentObject->tablename);
         $uuid = $this->escape($persistentObject->uuid);
         $this->executeNoResultQuery('delete from '.$tableName.' where uuid=\''.$uuid.'\'');
     }
 
+    /**
+     * Derived classes must analyze the given resultset and return a row
+     * as object or false, when there are no more elements in the
+     * resultset. For MySQL the function simply returns 
+     * $resultset->fetch_object().
+     * 
+     * @param object $resultset Resultset depending on the database
+     * @return object Row containing columns as properties.
+     */
+    protected abstract function extractRowFromResultset($resultset);
+    
     /**
      * Returns an array of objects from the given query. When a persistent
      * object class is given, the array elements are casted into it.
@@ -133,11 +150,8 @@ abstract class avorium_core_persistence_AbstractPersistenceAdapter {
      */
     public function executeMultipleResultQuery($query, $persistentobjectclass = null) {
         $resultset = $this->getDatabase()->query($query);
-        if (!is_a($resultset, 'mysqli_result')) {
-            return array();
-        }
         $result = array();
-        while ($row = $resultset->fetch_object()) {
+        while ($row = $this->extractRowFromResultset($resultset)) {
             $result[] = $persistentobjectclass !== null ? $this->cast($row, $persistentobjectclass) : $row;
         }
         return $result;
@@ -173,6 +187,24 @@ abstract class avorium_core_persistence_AbstractPersistenceAdapter {
     public function executeNoResultQuery($query) {
         $this->getDatabase()->query($query);
     }
+    
+    /**
+     * Analyzes the given metadata structure and tries to find the property
+     * name for a given table column name. Returns null when any problem
+     * occurs.
+     * 
+     * @param array $metadata Metadata to analyze
+     * @param string $metaname Table column name to find a property name for
+     * @return string Found property name or content of $metaname
+     */
+    private function findPropertyNameForMetaName($metadata, $metaname) {
+        foreach ($metadata['properties'] as $key => $value) {
+            if (!is_null($value) && isset($value['name']) && $value['name'] === $metaname) {
+                return $key;
+            }
+        }
+        return null;
+    }
 
     /**
      * Casts the given object from the database into the given class by copying
@@ -184,22 +216,19 @@ abstract class avorium_core_persistence_AbstractPersistenceAdapter {
      * @param string $classname Name of the class to cast the object into.
      * @return object Object casted into the given class name. The returned
      * object is a new one, so comparing with == will not be the same
-     * as comparing with the source object!
+     * as comparing with the source object! Returns null, 
+     * when the given object is not an object
      */
-    public function cast($obj, $classname) {
-            if (!$obj) {
-                return false;
+    private function cast($obj, $classname) {
+            if (!is_object($obj)) {
+                return null;
             }
             $metadata = avorium_core_persistence_helper_Annotation::getPersistableMetaData($classname);
             $result = new $classname();
             foreach ($obj as $key => $value) {
-                if (!property_exists($result, $key)) {
-                    continue; // Skip non existing properties
-                }
-                if ($metadata === null) {
-                    $result->$key = $value;
-                } else {
-                    $result->$key = $this->castDatabaseValue($value, $metadata['properties'][$key]['type']);
+                $propertyName = $this->findPropertyNameForMetaName($metadata, $key);
+                if (!is_null($propertyName)) {
+                    $result->$propertyName = $this->castDatabaseValue($value, $metadata['properties'][$propertyName]['type']);
                 }
             }
             return $result;

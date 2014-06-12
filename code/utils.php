@@ -10,6 +10,13 @@ function shownotification($type, $text) {
 	avorium_core_ui_Notification::shownotification($type, $text);
 }
 
+function stripUrlFromRequest($requestUri) {
+    if (!is_string($requestUri)) {
+        return null;
+    }
+    return strrpos($requestUri, "?") ? substr($requestUri, 0, strrpos($requestUri, "?")) : $requestUri;
+}
+
 /**
  * Initialisiert den Seitenaufruf. Wird in jedem Projekt von index.php 
  * aufgerufen.

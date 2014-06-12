@@ -24,11 +24,27 @@
  * THE SOFTWARE.
  */
 
-require_once dirname(__FILE__).'/../code/avorium/core/ui/DataTable.php';
+require_once dirname(__FILE__).'/../code/avorium/core/persistence/PersistentObject.php';
+require_once dirname(__FILE__).'/PersistentObjectTestPersistentObject.php';
 
 /**
- * Tests the functionality of the DataTable class
+ * Tests the functionality of the PersistentObject class, especially the
+ * automatic property initialization in the constructor.
  */
-/*class DataTableTest extends PHPUnit_Framework_TestCase {
+class PersistentObjectTest extends PHPUnit_Framework_TestCase {
+    
+    public function testPropertyInitialization() {
+        // Initialize persistent object with constructor array
+        $ponormal = new PersistentObjectTestPersistentObject(array(
+            'uuid' => 'abcdef',
+            'booleanValue' => true,
+            'intValue' => 1234567890,
+            'stringValue' => 'Hello world!'
+        ));
+        $this->assertEquals('abcdef', $ponormal->uuid, 'Uuid of persistent object is not as expected.');
+        $this->assertEquals(true, $ponormal->booleanValue, 'Uuid of persistent object is not as expected.');
+        $this->assertEquals(1234567890, $ponormal->intValue, 'Uuid of persistent object is not as expected.');
+        $this->assertEquals('Hello world!', $ponormal->stringValue, 'Uuid of persistent object is not as expected.');
+    }
 
-}*/
+}

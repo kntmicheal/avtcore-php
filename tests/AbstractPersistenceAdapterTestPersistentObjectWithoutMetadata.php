@@ -24,11 +24,33 @@
  * THE SOFTWARE.
  */
 
-require_once dirname(__FILE__).'/../code/avorium/core/ui/DataTable.php';
+require_once dirname(__FILE__).'/../code/avorium/core/persistence/PersistentObject.php';
 
 /**
- * Tests the functionality of the DataTable class
+ * Test class is representing a persistent object without metadata
+ * information. Used in persistence adapter tests.
  */
-/*class DataTableTest extends PHPUnit_Framework_TestCase {
+class AbstractPersistenceAdapterTestPersistentObjectWithoutMetadata
+extends avorium_core_persistence_PersistentObject {
+	
+	/**
+	 * Must not match to database column because of missing annotation
+         * even if property name matches column name
+	 */
+	public $BOOLEAN_VALUE;
 
-}*/
+	/**
+	 * Must not match to database column because of missing annotation
+         * even if property name matches column name
+	 */
+	public $INT_VALUE;
+	
+	/**
+	 * Must not match to any database content because of missing
+         * persistable attribute on class level
+         * 
+	 * @avtpersistable(name="STRING_VALUE")
+	 */
+	public $STRING_VALUE;
+	
+}

@@ -79,6 +79,9 @@ class avorium_core_persistence_helper_Annotation {
         $parameters = array();
         foreach(explode(",", trim($betweenBrackets)) as $parameter) {
             $parameterparts = explode("=", trim($parameter));
+            if (count($parameterparts) < 2) { // When no annotation parameters were given
+                continue;
+            }
             $parametername = trim($parameterparts[0]);
             $parametervalue = trim(str_replace("\"", "", str_replace("'", "", $parameterparts[1])));
             $parameters[$parametername] = $parametervalue;

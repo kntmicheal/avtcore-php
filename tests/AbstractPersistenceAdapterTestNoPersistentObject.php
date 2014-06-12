@@ -24,11 +24,32 @@
  * THE SOFTWARE.
  */
 
-require_once dirname(__FILE__).'/../code/avorium/core/ui/DataTable.php';
+require_once dirname(__FILE__).'/../code/avorium/core/persistence/PersistentObject.php';
 
 /**
- * Tests the functionality of the DataTable class
+ * Test class is representing a persistent object which is not derived from
+ * avorium_core_persistence_PersistentObject. Used in persistence adapter 
+ * tests.
+ * @avtpersistable(name="potest")
  */
-/*class DataTableTest extends PHPUnit_Framework_TestCase {
+class AbstractPersistenceAdapterTestNoPersistentObject {
 
-}*/
+	/**
+	 * Represents a boolean value
+	 * @avtpersistable(name="BOOLEAN_VALUE", type="bool")
+	 */
+	public $booleanValue;
+	
+	/**
+	 * Represents an integer value
+	 * @avtpersistable(name="INT_VALUE", type="int")
+	 */
+	public $intValue;
+	
+	/**
+	 * Represents a string value
+	 * @avtpersistable(name="STRING_VALUE", type="string", size=255)
+	 */
+	public $stringValue;
+	
+}

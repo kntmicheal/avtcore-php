@@ -24,8 +24,8 @@
  * THE SOFTWARE.
  */
 
-require_once '../code/avorium/core/persistence/MySqlPersistenceAdapter.php';
-require_once 'AbstractPersistenceAdapterTest.php';
+require_once dirname(__FILE__).'/../code/avorium/core/persistence/MySqlPersistenceAdapter.php';
+require_once dirname(__FILE__).'/AbstractPersistenceAdapterTest.php';
 
 /**
  * Persistence adapter tests especially for MySQL databases.
@@ -72,5 +72,5 @@ class MySqlPersistenceAdapterTest extends AbstractPersistenceAdapterTest {
 		return $result;
 	}
 
-	// All test methods are defined in the parent abstract class.
+	// All other test methods are defined in the parent abstract class.
 }

@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-require_once '../code/avorium/core/persistence/PersistentObject.php';
+require_once dirname(__FILE__).'/../code/avorium/core/persistence/PersistentObject.php';
 
 /**
  * Test class is representing a persistent object. Used in persistence adapter 

@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-require_once 'helper/Annotation.php';
+require_once dirname(__FILE__).'/helper/Annotation.php';
 
 /**
  * Base class for all persistent objects
