@@ -78,13 +78,12 @@ abstract class avorium_core_persistence_AbstractPersistenceAdapter {
         if (!is_subclass_of($persistentobjectclass, 'avorium_core_persistence_PersistentObject')) {
             throw new Exception('The given class is not derived from avorium_core_persistence_PersistentObject. But this is needed to extract the table name!');
         }
-        $tablename = $this->escape((new $persistentobjectclass())->tablename);
-        $objs = $this->executeMultipleResultQuery('select * from '.$tablename);
-        $result = array();
-        foreach ($objs as $obj) {
-            $result[] = $this->cast($obj, $persistentobjectclass);
+        $tablename = (new $persistentobjectclass())->tablename;
+        $escapedtablename = $this->escape($tablename);
+        if (strlen($escapedtablename) < 1) {
+            throw new Exception('Could not determine table name from persistent object annotations.');
         }
-        return $result;
+        return $this->executeMultipleResultQuery('select * from '.$escapedtablename, $persistentobjectclass);
     }
 
     /**
@@ -101,9 +100,12 @@ abstract class avorium_core_persistence_AbstractPersistenceAdapter {
         if (!is_subclass_of($persistentobjectclass, 'avorium_core_persistence_PersistentObject')) {
             throw new Exception('The given class is not derived from avorium_core_persistence_PersistentObject. But this is needed to extract the table name!');
         }
-        $tablename = $this->escape((new $persistentobjectclass())->tablename);
-        $obj = $this->executeSingleResultQuery('select * from '.$tablename.' where uuid=\''.$this->escape($uuid).'\'');
-        return $this->cast($obj, $persistentobjectclass);
+        $tablename = (new $persistentobjectclass())->tablename;
+        $escapedtablename = $this->escape($tablename);
+        if (strlen($escapedtablename) < 1) {
+            throw new Exception('Could not determine table name from persistent object annotations.');
+        }
+        return $this->executeSingleResultQuery('select * from '.$escapedtablename.' where uuid=\''.$this->escape($uuid).'\'', $persistentobjectclass);
     }
 
     /**
@@ -150,6 +152,12 @@ abstract class avorium_core_persistence_AbstractPersistenceAdapter {
      */
     public function executeMultipleResultQuery($query, $persistentobjectclass = null) {
         $resultset = $this->getDatabase()->query($query);
+        if ($resultset === true) { // Query did not return any result because it was a no result query
+            throw new Exception('Multiple result statement seems to be a no result statement.');
+        }
+        if (!is_object($resultset)) {
+            throw new Exception('Error in query: '.$query);
+        }
         $result = array();
         while ($row = $this->extractRowFromResultset($resultset)) {
             $result[] = $persistentobjectclass !== null ? $this->cast($row, $persistentobjectclass) : $row;
@@ -158,7 +166,7 @@ abstract class avorium_core_persistence_AbstractPersistenceAdapter {
     }
 
     /**
-     * Returns a single object from the given query or false, when no 
+     * Returns a single object from the given query or null, when no 
      * result was found. When a persistent object class is given, the 
      * result is casted into it.
      * 
@@ -171,10 +179,21 @@ abstract class avorium_core_persistence_AbstractPersistenceAdapter {
      */
     public function executeSingleResultQuery($query, $persistentobjectclass = null) {
         $resultset = $this->getDatabase()->query($query);
-        if (!$resultset || $resultset->num_rows < 1) {
-            return false;
+        if ($resultset === true) { // Query did not return any result because it was a no result query
+            throw new Exception('Single result statement seems to be a no result statement.');
         }
-        $result = $persistentobjectclass !== null ? $this->cast($resultset->fetch_object(), $persistentobjectclass) : $resultset->fetch_object();
+        if (!is_object($resultset)) { // Error in SQL query
+            throw new Exception('Error in query: '.$query);
+        }
+        $row = $this->extractRowFromResultset($resultset);
+        if (is_null($row)) {
+            return null;
+        }
+        // Check for further results, this seems to be a semantic error
+        if ($this->extractRowFromResultset($resultset)) {
+            throw new Exception('Single result statement returned more than one result.');
+        }
+        $result = $persistentobjectclass !== null ? $this->cast($row, $persistentobjectclass) : $row;
         return $result;
     }
 
@@ -185,7 +204,13 @@ abstract class avorium_core_persistence_AbstractPersistenceAdapter {
      * SQL injections. Caller has to make sure, that the query is correct.
      */
     public function executeNoResultQuery($query) {
-        $this->getDatabase()->query($query);
+        $resultset = $this->getDatabase()->query($query);
+        if (!$resultset) { // When false is returned, the query was not successful
+            throw new Exception('Error in query: '.$query);
+        }
+        if ($resultset !== true) { // When not true (but an object is returned, the query was of wrong type
+            throw new Exception('No result statement returned a result.');
+        }
     }
     
     /**
@@ -220,18 +245,19 @@ abstract class avorium_core_persistence_AbstractPersistenceAdapter {
      * when the given object is not an object
      */
     private function cast($obj, $classname) {
-            if (!is_object($obj)) {
-                return null;
-            }
-            $metadata = avorium_core_persistence_helper_Annotation::getPersistableMetaData($classname);
-            $result = new $classname();
-            foreach ($obj as $key => $value) {
-                $propertyName = $this->findPropertyNameForMetaName($metadata, $key);
-                if (!is_null($propertyName)) {
+        $metadata = avorium_core_persistence_helper_Annotation::getPersistableMetaData($classname);
+        $result = new $classname();
+        foreach ($obj as $key => $value) {
+            $propertyName = $this->findPropertyNameForMetaName($metadata, $key);
+            if (!is_null($propertyName)) {
+                if (isset($metadata['properties'][$propertyName]['type'])) {
                     $result->$propertyName = $this->castDatabaseValue($value, $metadata['properties'][$propertyName]['type']);
+                } else {
+                    $result->$propertyName = $value;
                 }
             }
-            return $result;
+        }
+        return $result;
     }
 
     /**

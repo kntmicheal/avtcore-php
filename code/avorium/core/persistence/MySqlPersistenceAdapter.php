@@ -76,9 +76,15 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
                     case 'int':
                         $values[] = $value;
                         break;
-                    default:
+                    case 'string':
+                        // Prevent storing overlong strings into database when MySQL server is not in strict mode
+                        if (isset($definition['size']) && (int)$definition['size'] < strlen($value)) {
+                            throw new Exception('The string to be inserted is too long for the column.');
+                        }
                         $values[] = '\''.$value.'\'';
                         break;
+                    default: // Unknown data types cannot be handled correctly
+                        throw new Exception('Database column type \''.$definition['type'].'\' is not known to the persistence adapter.');
                 }
             }
             if ($name !== 'uuid') {
@@ -92,7 +98,7 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
     private function createTable($propertiesMetaData, $tableName) {
         // Table does not exist, create it
         $columns = array();
-        $columns[] = 'uuid NVARCHAR(40) NOT NULL';
+        $columns[] = 'uuid varchar(40) NOT NULL';
         foreach ($propertiesMetaData as $definition) {
             if ($definition['name'] !== 'uuid') {
                 $columntype = $this->getDatabaseType($definition['type']);
@@ -110,15 +116,20 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
         $newcolumns = array();
         foreach ($propertiesMetaData as $definition) {
             $columnfound = false;
+            $columntype = $this->getDatabaseType($definition['type']);
+            $columnsize = isset($definition['size']) ? '('.$definition['size'].')' : '';
             foreach ($existingcolumns as $existingcolumn) {
                 if ($existingcolumn->Field === $definition['name']) {
                     $columnfound = true;
+                    // Check whether to try to change the type. This may be a data consistency risk
+                    $existingcolumntype = substr($existingcolumn->Type, 0, strpos($existingcolumn->Type, '('));
+                    if (strtolower($existingcolumntype) !== strtolower($columntype)) {
+                        throw new Exception('Changing the column type is not supported. Database:'.$existingcolumntype.', persistent object:'.$columntype);
+                    }
                     break;
                 }
             }
             if (!$columnfound) {
-                $columntype = $this->getDatabaseType($definition['type']);
-                $columnsize = isset($definition['size']) ? '('.$definition['size'].')' : '';
                 $newcolumns[] = ' ADD COLUMN '.$definition['name'].' '.$columntype.$columnsize;
             }
         }
@@ -141,14 +152,23 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
         }
     }
 
+    /**
+     * Maps the given persistent object type (given via annotation) to a
+     * MySQL database type.
+     * 
+     * @param string $type Type set in the annotation
+     * @return string Corresponsing MySQL database column type
+     */
     private function getDatabaseType($type) {
         switch($type) {
             case 'bool':
-                return 'TINYINT(1)';
+                return 'tinyint';
             case 'int':
-                return 'INT';
-            default:
-                return 'NVARCHAR';
+                return 'int';
+            case 'string':
+                return 'varchar';
+            default: // Unknown data types cannot be handled correctly
+                throw new Exception('Database column type \''.$type.'\' is not known to the persistence adapter.');
         }
     }
 
@@ -158,8 +178,10 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
                 return (bool)$value;
             case 'int':
                 return (int)$value;
-            default:
-                return $value;
+            case 'string':
+                return (string)$value;
+            default: // Unknown data types cannot be handled correctly
+                throw new Exception('Database column type \''.$metatype.'\' is not known to the persistence adapter.');
         }
     }
 

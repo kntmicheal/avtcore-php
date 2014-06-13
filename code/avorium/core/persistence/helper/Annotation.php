@@ -30,7 +30,8 @@
 class avorium_core_persistence_helper_Annotation {
 
     /**
-     * Returns the annotation structure for the given object or null, when no
+     * Returns the annotation structure for the given object or an empty 
+     * metadata structure, when no
      * metadata can be read (when the properties are not commented or have no
      * annotations)
      * Class annotations for table names: @avtpersistable(name = "name")
@@ -38,7 +39,7 @@ class avorium_core_persistence_helper_Annotation {
      * 
      * @param string $objectorclassname Object or class name to analyze
      * @return array Array of metadata describing the object:
-     * [ "name" => E.G. name of the database table of the class,
+     * [ "name" => E.G. name of the database table of the class or null, when name is not set in annotation,
      *   "properties" => array [ // Properties of the class
      *      "propertyname" => array [ // Array describing metadata of property
      *          "name" => // e.g. name of the database columns of the property
@@ -51,7 +52,7 @@ class avorium_core_persistence_helper_Annotation {
         $reflectionClass = new ReflectionClass($objectorclassname);
         $classMetaData = static::parseDocComment($reflectionClass);
         if ($classMetaData === null) {
-            return null;
+            $classMetaData = array("name" => null);
         }
         $classMetaData["properties"] = array();
         foreach($reflectionClass->getProperties() as $property) {

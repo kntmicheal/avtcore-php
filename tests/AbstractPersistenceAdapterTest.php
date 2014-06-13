@@ -29,6 +29,8 @@ require_once dirname(__FILE__).'/AbstractPersistenceAdapterTestPersistentObject.
 require_once dirname(__FILE__).'/AbstractPersistenceAdapterTestPersistentObjectWithIncompleteMetadata.php';
 require_once dirname(__FILE__).'/AbstractPersistenceAdapterTestPersistentObjectWithoutMetadata.php';
 require_once dirname(__FILE__).'/AbstractPersistenceAdapterTestNoPersistentObject.php';
+require_once dirname(__FILE__).'/AbstractPersistenceAdapterTestPersistentObjectDifferentType.php';
+require_once dirname(__FILE__).'/AbstractPersistenceAdapterTestPersistentObjectUnknownType.php';
 
 /**
  * Tests the functionality of the persistence adapters. The tests are run
@@ -179,10 +181,10 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
     }
     
     /**
-     * Tests the correct behaviour of persistent objects with 
-     * incomplete annotations.
+     * Tests the correct behaviour of the get() function with persistent objects 
+     * with incomplete annotations.
      */
-    public function testMissingMetadata() {
+    public function testGetMissingMetadata() {
         $uuid = 'abcdefg';
         $bool = true;
         $int = 1234567;
@@ -190,9 +192,68 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
         // Write data to the database
         $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
         // Read data out and cast it to persistent object with incomplete metadata
-        $po = $this->getPersistenceAdapter()->get('AbstractPersistenceAdapterTestPersistentObjectWithoutMetadata', $uuid);
-        // Result must be null here. It should not be possible to match to an class without knowing from which table to extract the date
-        $this->assertNull($po, 'Result is not null. Where does the system know which table I want to read out?');
+        $this->setExpectedException('Exception', 'Could not determine table name from persistent object annotations.');
+        // Here should come up an exception. It should not be possible to match to an class without knowing from which table to extract the date
+        $this->getPersistenceAdapter()->get('AbstractPersistenceAdapterTestPersistentObjectWithoutMetadata', $uuid);
+    }
+    
+    /**
+     * Tests the correct behaviour of the getAll() function with persistent objects 
+     * with incomplete annotations.
+     */
+    public function testGetAllMissingMetadata() {
+        $records = [
+            ['uuid' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
+            ['uuid' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
+            ['uuid' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+        ];
+        // Write data to the database
+        foreach ($records as $record) {
+            $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['uuid'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
+        }
+        // Read data out and cast it to persistent object with incomplete metadata
+        $this->setExpectedException('Exception', 'Could not determine table name from persistent object annotations.');
+        // Here should come up an exception. It should not be possible to match to an class without knowing from which table to extract the date
+        $this->getPersistenceAdapter()->getAll('AbstractPersistenceAdapterTestPersistentObjectWithoutMetadata');
+    }
+    
+    /**
+     * Tests the correct behaviour of the executeSingleResultQuery() function 
+     * with persistent objects with incomplete annotations.
+     */
+    public function testSingleResultQueryMissingMetadata() {
+        $uuid = 'abcdefg';
+        $bool = true;
+        $int = 1234567;
+        $string = 'avorium';
+        // Write data to the database
+        $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
+        // Read data out and cast it to persistent object with incomplete metadata
+        // Here should come up an exception. It should not be possible to match to an class without knowing from which table to extract the date
+        $query = 'select * from potest where uuid = \''.$uuid.'\'';
+        $po = $this->getPersistenceAdapter()->executeSingleResultQuery($query, 'AbstractPersistenceAdapterTestPersistentObjectWithoutMetadata');
+        // Should return a result because when casting to an object the missing class metadata is irrelevant
+        $this->assertNotNull($po, 'The result is null.');
+    }
+    
+    /**
+     * Tests the correct behaviour of the executeMultipleResultQuery() function
+     * with persistent objects with incomplete annotations.
+     */
+    public function testMultipleResultMissingMetadata() {
+        $records = [
+            ['uuid' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
+            ['uuid' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
+            ['uuid' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+        ];
+        // Write data to the database
+        foreach ($records as $record) {
+            $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['uuid'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
+        }
+        $query = 'select * from potest where uuid in (\'uuid1tRMR1\',\'uuid1tRMR2\',\'uuid1tRMR3\')';
+        $pos = $this->getPersistenceAdapter()->executeMultipleResultQuery($query, 'AbstractPersistenceAdapterTestPersistentObjectWithoutMetadata');
+        // Should return results because when casting to an object the missing class metadata is irrelevant
+        $this->assertEquals(count($records), count($pos), 'Wrong number of database records found.');
     }
     
     /**
@@ -299,31 +360,428 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($int, $po->intValue, 'Integer value from persistent object differs from the int value of the database.');
         $this->assertEquals($string, $po->stringValue, 'String value from persistent object differs from the string value of the database.');
     }
+
+    /**
+     * Tests the executeMultipleResultQuery() function
+     */
+    public function testMultipleResultQuery() {
+        $records = [
+            ['uuid' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
+            ['uuid' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
+            ['uuid' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+        ];
+        // Write data to the database
+        foreach ($records as $record) {
+            $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['uuid'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
+        }
+        // Read data out and cast it to persistent object
+        $query = 'select * from potest where uuid in (\'uuid1tRMR1\',\'uuid1tRMR2\',\'uuid1tRMR3\')';
+        $pos = $this->getPersistenceAdapter()->executeMultipleResultQuery($query, 'AbstractPersistenceAdapterTestPersistentObject');
+        $this->assertEquals(count($records), count($pos), 'Wrong number of database records found.');
+        for($i = 0; $i < count($pos); $i++)  {
+            $this->assertEquals($records[$i]['uuid'], $pos[$i]->uuid, 'Uuid value from persistent object differs from the uuid value of the database.');
+            $this->assertEquals($records[$i]['bool'], $pos[$i]->booleanValue, 'Boolean value from persistent object differs from the boolean value of the database.');
+            $this->assertEquals($records[$i]['int'], $pos[$i]->intValue, 'Integer value from persistent object differs from the int value of the database.');
+            $this->assertEquals($records[$i]['string'], $pos[$i]->stringValue, 'String value from persistent object differs from the string value of the database.');
+        }
+    }
     
-    // Tabellen anlegen
-    // Tabellen erweitern
+    /**
+     * Tests the executeSingleResultQuery() function
+     */
+    public function testSingleResultQuery() {
+        $uuid = 'abcdefg';
+        $bool = true;
+        $int = 1234567;
+        $string = 'avorium';
+        // Write data to the database
+        $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
+        // Read data out and cast it to persistent object
+        $query = 'select * from potest where uuid = \'abcdefg\'';
+        $po = $this->getPersistenceAdapter()->executeSingleResultQuery($query, 'AbstractPersistenceAdapterTestPersistentObject');
+        // Compare properties
+        $this->assertEquals($uuid, $po->uuid, 'Uuid value from persistent object differs from the uuid value of the database.');
+        $this->assertEquals($bool, $po->booleanValue, 'Boolean value from persistent object differs from the boolean value of the database.');
+        $this->assertEquals($int, $po->intValue, 'Integer value from persistent object differs from the int value of the database.');
+        $this->assertEquals($string, $po->stringValue, 'String value from persistent object differs from the string value of the database.');
+    }
+
+    /**
+     * Tests the executeMultipleResultQuery() function without using persistent objects
+     */
+    public function testMultipleResultQueryWithoutPersistentObject() {
+        $records = [
+            ['uuid' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
+            ['uuid' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
+            ['uuid' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+        ];
+        // Write data to the database
+        foreach ($records as $record) {
+            $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['uuid'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
+        }
+        // Read data out
+        $query = 'select * from potest where uuid in (\'uuid1tRMR1\',\'uuid1tRMR2\',\'uuid1tRMR3\')';
+        $pos = $this->getPersistenceAdapter()->executeMultipleResultQuery($query);
+        $this->assertEquals(count($records), count($pos), 'Wrong number of database records found.');
+        for($i = 0; $i < count($pos); $i++)  {
+            $this->assertEquals($records[$i]['uuid'], $pos[$i]->uuid, 'Uuid value from persistent object differs from the uuid value of the database.');
+            $this->assertEquals($records[$i]['bool'], $pos[$i]->BOOLEAN_VALUE, 'Boolean value from persistent object differs from the boolean value of the database.');
+            $this->assertEquals($records[$i]['int'], $pos[$i]->INT_VALUE, 'Integer value from persistent object differs from the int value of the database.');
+            $this->assertEquals($records[$i]['string'], $pos[$i]->STRING_VALUE, 'String value from persistent object differs from the string value of the database.');
+        }
+    }
     
-    // 
-    // Multi-Daten-SQL mit persistenten Objekten ausführen und dabei Casting prüfen
-    // Single-Daten-SQL mit persistenten Objekten ausführen
-    // Multi-Daten-SQL ohne persistente Objekten ausführen
-    // Single-Daten-SQL ohne persistente Objekten ausführen
-    // SQL ohne Rückgabe ausführen
-    // Einfache Werte aus Datenbank lesen und casten
+    /**
+     * Tests the executeSingleResultQuery() function without using persistent objects
+     */
+    public function testSingleResultQueryWithoutPersistentObject() {
+        $uuid = 'abcdefg';
+        $bool = true;
+        $int = 1234567;
+        $string = 'avorium';
+        // Write data to the database
+        $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
+        // Read data out and cast it to persistent object
+        $query = 'select * from potest where uuid = \'abcdefg\'';
+        $po = $this->getPersistenceAdapter()->executeSingleResultQuery($query);
+        // Compare properties
+        $this->assertEquals($uuid, $po->uuid, 'Uuid value from persistent object differs from the uuid value of the database.');
+        $this->assertEquals($bool, $po->BOOLEAN_VALUE, 'Boolean value from persistent object differs from the boolean value of the database.');
+        $this->assertEquals($int, $po->INT_VALUE, 'Integer value from persistent object differs from the int value of the database.');
+        $this->assertEquals($string, $po->STRING_VALUE, 'String value from persistent object differs from the string value of the database.');
+    }
 
-    // Negativtests
+    /**
+     * Tests the executeNoResultQuery() function
+     */
+    public function testNoResultQuery() {
+        $uuid = 'abcdefg';
+        $bool = true;
+        $int = 1234567;
+        $string = 'avorium';
+        // Store new record with executeNoResultQuery()
+        $query = 'insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')';
+        $this->getPersistenceAdapter()->executeNoResultQuery($query);
+        // Get record back from database
+        $result = $this->executeQuery('select * from potest where uuid=\''.$uuid.'\'');
+        // Records must be unique
+        $this->assertEquals($uuid, $result[0]['uuid'], 'Uuid value from persistent object differs from the uuid value of the database.');
+        $this->assertEquals($bool, (bool)$result[0]['BOOLEAN_VALUE'], 'Boolean value from persistent object differs from the boolean value of the database.');
+        $this->assertEquals($int, intval($result[0]['INT_VALUE']), 'Integer value from persistent object differs from the int value of the database.');
+        $this->assertEquals($string, $result[0]['STRING_VALUE'], 'String value from persistent object differs from the string value of the database.');
+    }
 
-    // Auslesen von einzelnen Datensätzen, deren UUID nicht in Datenbank ist
-    // Tabellen erweitern, indem Datentypen von Spalten verändert werden, soll nicht möglich sein
-    // Casten von Datentypen, die der Datenbank unbekannt sind
-    // Casten von Datentypen, die dem Code unbekannt sind
-    // Verwendung von Sonderzeichen
-    // SQL-Injection
-    // Fehlerhafte Datenbankverbindung
-    // Fehlerhafte SQL-Statements
-    // SQL-Statements, die nicht zur Abfrageart passen (Multi vs. Single vs. Einfacher Wert)
-    // Strings mit unterschiedlicher Länge in Datenbank (40, 255, 65535 Zeichen)
+    // negative tests
+    
+    /**
+     * Try to read a record via get() whose UUID is not in database
+     */
+    public function testGetSingleNonExistingRecord() {
+        $uuid = 'abcdefg';
+        $readuuid = 'hijklm';
+        $bool = true;
+        $int = 1234567;
+        $string = 'avorium';
+        // Write data to the database
+        $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
+        // Read data out and cast it to persistent object
+        $po = $this->getPersistenceAdapter()->get('AbstractPersistenceAdapterTestPersistentObject', $readuuid);
+        // Compare properties
+        $this->assertNull($po, 'Database should not return a result when requesting an unknown uuid.');
+    }
+    
+    /**
+     * Tests the update of table column definitions by changing the datatype.
+     * In this case an exception should be thrown-
+     */
+    public function testChangeColumnDefinition() {
+        // Automatically update table with persistent object with different type
+        $this->setExpectedException('Exception', 'Changing the column type is not supported. Database:varchar, persistent object:int');
+        $this->getPersistenceAdapter()->updateOrCreateTable('AbstractPersistenceAdapterTestPersistentObjectDifferentType');
+    }
 
+    /**
+     * Tests the use of a type in annotations which is not known to the 
+     * persistence adapter when writing to database
+     */
+    public function testCastTypeUnknownWhenWriting() {
+        // Create record
+        $po = new AbstractPersistenceAdapterTestPersistentObjectUnknownType();
+        $po->booleanValue = true;
+        $po->intValue = 2147483647;
+        $po->stringValue = 'Hallo Welt!';
+        // Store new record
+        $this->setExpectedException('Exception', 'Database column type \'unknowntype\' is not known to the persistence adapter.');
+        $this->getPersistenceAdapter()->save($po);
+    }
+
+    /**
+     * Tests the use of a type in annotations which is not known to the 
+     * persistence adapter when reading from database
+     */
+    public function testCastTypeUnknownWhenReading() {
+       $uuid = 'abcdefg';
+        $bool = true;
+        $int = 1234567;
+        $string = 'avorium';
+        // Write data to the database
+        $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
+        // Read data out and cast it to persistent object
+        $this->setExpectedException('Exception', 'Database column type \'unknowntype\' is not known to the persistence adapter.');
+        $this->getPersistenceAdapter()->get('AbstractPersistenceAdapterTestPersistentObjectUnknownType', $uuid);
+    }
+    
+    /**
+     * Tests the creation of a table when a column type is unknown to the 
+     * persistence adapter.
+     */
+    public function testCreateTableUnknownType() {
+        // Drop table
+        $this->executeQuery('drop table potest');
+        // Automatically create table
+        $this->setExpectedException('Exception', 'Database column type \'unknowntype\' is not known to the persistence adapter.');
+        $this->getPersistenceAdapter()->updateOrCreateTable('AbstractPersistenceAdapterTestPersistentObjectUnknownType');
+    }
+    
+    /**
+     * Tests the update of a table when a column type is unknown to the 
+     * persistence adapter.
+     */
+    public function testUpdateTableUnknownType() {
+        // Drop table
+        $this->executeQuery('drop table potest');
+        // Manually create table with UUID column only
+        $this->executeQuery('create table potest (uuid NVARCHAR(40) NOT NULL, PRIMARY KEY (uuid))');
+        // Automatically update table
+        $this->setExpectedException('Exception', 'Database column type \'unknowntype\' is not known to the persistence adapter.');
+        $this->getPersistenceAdapter()->updateOrCreateTable('AbstractPersistenceAdapterTestPersistentObjectUnknownType');
+    }
+    
+    /**
+     * Tests the use of special characters in string when writing to and
+     * reading from database. This includes SQL injections which could be
+     * performed, when the database does not handle the quotation marks
+     * (', ", `, ’) correctly.
+     */
+    public function testSpecialCharacters() {
+        // Create record
+        $potowrite = new AbstractPersistenceAdapterTestPersistentObject();
+        $potowrite->stringValue = '°!"§$%&/()=?`*\'>;:_+öä#<,.-²³¼¹½¬{[]}\\¸~’–…·|@\t\r\n';
+        // Store new record
+        $this->getPersistenceAdapter()->save($potowrite);
+        // Get record back from database
+        $result = $this->executeQuery('select * from potest where uuid=\''.$potowrite->uuid.'\'');
+        // Records must be unique
+        $this->assertEquals($potowrite->stringValue, $result[0]['STRING_VALUE'], 'String value from database differs from the string value of the persistent object.');
+        // Now test tehe same in the other (read) direction
+        $uuid = 'abcdefg';
+        $string = '°!"§$%&/()=?`*\'>;:_+öä#<,.-²³¼¹½¬{[]}\\¸~’–…·|@\t\r\n';
+        // Write data to the database
+        $this->executeQuery('insert into potest (uuid, STRING_VALUE) values (\''.$uuid.'\', \''.$this->escape($string).'\')');
+        // Read data out and cast it to persistent object
+        $potoread = $this->getPersistenceAdapter()->get('AbstractPersistenceAdapterTestPersistentObject', $uuid);
+        // Compare properties
+        $this->assertEquals($string, $potoread->stringValue, 'String value from persistent object differs from the string value of the database.');
+    }
+    
+    /**
+     * Tests the behaviour of the adapters when no database connection is 
+     * available. Only the getAll() function is tested because every function
+     * uses the getDatabase() function of the adapter directly or indirectly.
+     */
+    public function testNoDatabaseConnection() {
+        $persistenceadapter = $this->getErrornousPersistenceAdapter();
+        $this->setExpectedException('Exception');
+        $persistenceadapter->getAll('AbstractPersistenceAdapterTestPersistentObject');
+    }
+    
+    /**
+     * Tests the behaviour of the executeSingleResultQuery with errornous
+     * SQL statement.
+     */
+    public function testErrornousSingleResultSqlQuery() {
+        $this->setExpectedException('Exception', 'Error in query: errornous sql query');
+        $this->getPersistenceAdapter()->executeSingleResultQuery('errornous sql query');
+    }
+    
+    /**
+     * Tests the behaviour of the executeSingleResultQuery with errornous
+     * SQL statement
+     */
+    public function testErrornousMultipleResultSqlQuery() {
+        $this->setExpectedException('Exception', 'Error in query: errornous sql query');
+        $this->getPersistenceAdapter()->executeMultipleResultQuery('errornous sql query');
+    }
+    
+    /**
+     * Tests the behaviour of the executeSingleResultQuery with errornous
+     * SQL statement
+     */
+    public function testErrornousNoResultSqlQuery() {
+        $this->setExpectedException('Exception', 'Error in query: errornous sql query');
+        $this->getPersistenceAdapter()->executeNoResultQuery('errornous sql query');
+    }
+    
+    /**
+     * Tests the behaviour of the executeSingleResultQuery() function when
+     * a statement is given, which has multiple results. In this case
+     * an exception should be thrown because there seems to be a semantic error.
+     */
+    public function testSingleResultQueryWithMultipleResultStatement() {
+        $records = [
+            ['uuid' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
+            ['uuid' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
+            ['uuid' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+        ];
+        // Write data to the database
+        foreach ($records as $record) {
+            $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['uuid'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
+        }
+        $this->setExpectedException('Exception', 'Single result statement returned more than one result.');
+        $this->getPersistenceAdapter()->executeSingleResultQuery('select * from potest');
+    }
+    
+    /**
+     * Tests the behaviour of the executeSingleResultQuery() function when
+     * a statement is given, which has no results. In this case
+     * an exception should be thrown.
+     */
+    public function testSingleResultQueryWithNoResultStatement() {
+        $this->setExpectedException('Exception', 'Single result statement seems to be a no result statement.');
+        $this->getPersistenceAdapter()->executeSingleResultQuery('delete from potest');
+    }
+    
+    /**
+     * Tests the behaviour of the executeMultipleResultQuery() function when
+     * a statement is given, which has only one results. In this case
+     * an array with only one element should be returned.
+     */
+    public function testMultipleResultQueryWithSingleResultStatement() {
+        $uuid = 'abcdefg';
+        $bool = true;
+        $int = 1234567;
+        $string = 'avorium';
+        // Write data to the database
+        $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
+        // Read data out and cast it to persistent object
+        $query = 'select * from potest where uuid = \'abcdefg\'';
+        $pos = $this->getPersistenceAdapter()->executeMultipleResultQuery($query);
+        $this->assertEquals(1, count($pos), 'Wrong number of database records found.');
+    }
+    
+    /**
+     * Tests the behaviour of the executeMultipleResultQuery() function when
+     * a statement is given, which has no result. In this case
+     * an exception should be thrown.
+     */
+    public function testMultipleResultQueryWithNoResultStatement() {
+        $this->setExpectedException('Exception', 'Multiple result statement seems to be a no result statement.');
+        $this->getPersistenceAdapter()->executeMultipleResultQuery('delete from potest');
+    }
+    
+    /**
+     * Tests the behaviour of the executeNoResultQuery() function when
+     * a statement is given, which has a single result. In this case
+     * an exception should be thrown.
+     */
+    public function testNoResultQueryWithSingleResultStatement() {
+        $uuid = 'abcdefg';
+        $bool = true;
+        $int = 1234567;
+        $string = 'avorium';
+        // Write data to the database
+        $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
+        $this->setExpectedException('Exception', 'No result statement returned a result.');
+        $query = 'select * from potest where uuid = \'abcdefg\'';
+        $this->getPersistenceAdapter()->executeNoResultQuery($query);
+    }
+    
+    /**
+     * Tests the behaviour of the executeNoResultQuery() function when
+     * a statement is given, which has multiple results. In this case
+     * an exception should be thrown.
+     */
+    public function testNoResultQueryWithMultipleResultStatement() {
+        $records = [
+            ['uuid' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
+            ['uuid' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
+            ['uuid' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+        ];
+        // Write data to the database
+        foreach ($records as $record) {
+            $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['uuid'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
+        }
+        $this->setExpectedException('Exception', 'No result statement returned a result.');
+        $query = 'select * from potest';
+        $this->getPersistenceAdapter()->executeNoResultQuery($query);
+    }
+    
+    /**
+     * Tests storing a long string in the database which exceeds the column
+     * length. An exception should be thrown.
+     */
+    public function testSaveTooLongStrings() {
+        // Create record
+        $po = new AbstractPersistenceAdapterTestPersistentObject();
+        $po->stringValue = str_repeat('X', 1000); // Only 255 are allowed
+        // Store new record
+        $this->setExpectedException('Exception', 'The string to be inserted is too long for the column.');
+        $this->getPersistenceAdapter()->save($po);
+    }
+    
+    /**
+     * Tests getting less columns from the database via SQL statement than the
+     * persistent object has properties. The unused properties should remain in
+     * the default states.
+     */
+    public function testReadLessColumnsThanProperties() {
+        $uuid = 'abcdefg';
+        $bool = true;
+        $int = 1234567;
+        $string = 'avorium';
+        // Write data to the database
+        $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
+        // Read data out and cast it to persistent object
+        $query = 'select uuid from potest where uuid = \'abcdefg\'';
+        $po = $this->getPersistenceAdapter()->executeSingleResultQuery($query, 'AbstractPersistenceAdapterTestPersistentObject');
+        // Compare properties
+        $this->assertEquals($uuid, $po->uuid, 'Uuid value from persistent object differs from the uuid value of the database.');
+        // These columns must not match because they were not read out with the query
+        $this->assertNotEquals($bool, $po->booleanValue, 'Boolean value from persistent object equals the boolean value of the database.');
+        $this->assertNotEquals($int, $po->intValue, 'Integer value from persistent object equals the int value of the database.');
+        $this->assertNotEquals($string, $po->stringValue, 'String value from persistent object equals the string value of the database.');
+    }
+    
+    /**
+     * Tests getting other columns from database than the persistent object has
+     * properties. The properties should remain in default state and the column
+     * contents from the database should be discarded and not be put as dynamic
+     * properties to the returned object.
+     */
+    public function testReadOtherColumnsThanProperties() {
+        $uuid = 'abcdefg';
+        $bool = true;
+        $int = 1234567;
+        $string = 'avorium';
+        // Write data to the database
+        $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
+        // Read data out and cast it to persistent object
+        $query = 'select uuid otheruuid, BOOLEAN_VALUE otherbool, INT_VALUE otherint, STRING_VALUE otherstring from potest where uuid = \'abcdefg\'';
+        $po = $this->getPersistenceAdapter()->executeSingleResultQuery($query, 'AbstractPersistenceAdapterTestPersistentObject');
+        // Compare properties
+        // These columns must not match because they were not read out with the query
+        $this->assertNotEquals($uuid, $po->uuid, 'Uuid value from persistent object equals the uuid value of the database.');
+        $this->assertNotEquals($bool, $po->booleanValue, 'Boolean value from persistent object equals the boolean value of the database.');
+        $this->assertNotEquals($int, $po->intValue, 'Integer value from persistent object equals the int value of the database.');
+        $this->assertNotEquals($string, $po->stringValue, 'String value from persistent object equals the string value of the database.');
+        // Make sure that the columns from the query are NOT stored as dynamic properties of the object
+        $this->assertFalse(property_exists($po, 'otheruuid'), 'Dynamic property otheruuid exists.');
+        $this->assertFalse(property_exists($po, 'otherbool'), 'Dynamic property otherbool exists.');
+        $this->assertFalse(property_exists($po, 'otherint'), 'Dynamic property otherint exists.');
+        $this->assertFalse(property_exists($po, 'otherstring'), 'Dynamic property otherstring exists.');
+    }
+
+    // helper functions
 
     /**
      * Persistence adapter to use in test. Must be set in the setUp()-
@@ -352,4 +810,15 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
      * be empty.
      */
     protected abstract function executeQuery($query);	
+    
+    /**
+     * Escapes the given string for using it in SQL queries.
+     */
+    protected abstract function escape($string);
+    
+    /**
+     * The derived class should return a persistence adapter which has an
+     * errornous database connection and which cannot make queries correctly.
+     */
+    protected abstract function getErrornousPersistenceAdapter();
 }

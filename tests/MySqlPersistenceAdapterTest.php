@@ -32,45 +32,59 @@ require_once dirname(__FILE__).'/AbstractPersistenceAdapterTest.php';
  */
 class MySqlPersistenceAdapterTest extends AbstractPersistenceAdapterTest {
 	
-	private $host = '192.168.1.3';
-	private $database = 'avtcoretest';
-	private $username = 'avtcoretest';
-	private $password = 'avtcoretest';
-	
-	/**
-	 * Defines the MySQL persistence adapter to be used and prepares the
-	 * database (cleans tables).
-	 */
-	protected function setUp() {
-		parent::setUp();
-		$this->persistenceAdapter = 
-			new avorium_core_persistence_MySqlPersistenceAdapter(
-				$this->host, 
-				$this->database, 
-				$this->username, 
-				$this->password
-			);
-		$this->mysqli = mysqli_connect(
-			$this->host, 
-			$this->username, 
-			$this->password, 
-			$this->database
-		);
-		// Clean database tables
-		$this->mysqli->query('delete from potest'); // Table of AbstractPersistenceAdapterTestPersistentObject 
-	}
+    private $host = '192.168.1.3';
+    private $database = 'avtcoretest';
+    private $username = 'avtcoretest';
+    private $password = 'avtcoretest';
 
-	protected function executeQuery($query) {
-		$resultset = $this->mysqli->query($query);
-		$result = array();
-		if ($resultset === true || $resultset === false) {
-                    return $result;
-                } // Can happen with statements which have no result (CREATE TABLE)
-		while ($row = $resultset->fetch_array()) {
-			$result[] = $row;
-		}
-		return $result;
-	}
+    /**
+     * Defines the MySQL persistence adapter to be used and prepares the
+     * database (cleans tables).
+     */
+    protected function setUp() {
+        parent::setUp();
+        $this->persistenceAdapter = 
+            new avorium_core_persistence_MySqlPersistenceAdapter(
+                $this->host, 
+                $this->database, 
+                $this->username, 
+                $this->password
+            );
+        $this->mysqli = mysqli_connect(
+            $this->host, 
+            $this->username, 
+            $this->password, 
+            $this->database
+        );
+        // Clean database tables by recreating them
+        $this->mysqli->query('drop table potest');
+        $this->mysqli->query('create table potest (uuid NVARCHAR(40) NOT NULL, BOOLEAN_VALUE tinyint, INT_VALUE int, STRING_VALUE varchar(255), PRIMARY KEY (uuid))');
+    }
 
-	// All other test methods are defined in the parent abstract class.
+    protected function executeQuery($query) {
+        $resultset = $this->mysqli->query($query);
+        $result = array();
+        if ($resultset === true || $resultset === false) {
+            return $result;
+        } // Can happen with statements which have no result (CREATE TABLE)
+        while ($row = $resultset->fetch_array()) {
+            $result[] = $row;
+        }
+        return $result;
+    }
+
+    protected function escape($string) {
+        return mysqli_real_escape_string($this->mysqli, $string);
+    }
+
+    protected function getErrornousPersistenceAdapter() {
+        return new avorium_core_persistence_MySqlPersistenceAdapter(
+            'wronghost', 
+            'wrongdatabase', 
+            'wrongusername', 
+            'wrongpassword'
+        );
+    }
+
+    // All other test methods are defined in the parent abstract class.
 }
