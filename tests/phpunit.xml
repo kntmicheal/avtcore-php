@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<phpunit>
+<phpunit verbose="true">
   <testsuites>
     <testsuite name="avtcore">
-      <directory>tests</directory>
+      <directory>./</directory>
     </testsuite>
   </testsuites>
 </phpunit>
