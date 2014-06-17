@@ -33,7 +33,7 @@ abstract class avorium_core_persistence_PersistentObject {
 
     /**
      * Unique identifier of the persistent object
-     * @avtpersistable(name="uuid", type="string", size=40)
+     * @avtpersistable(name="UUID", type="string", size=40)
      */
     public $uuid;
 

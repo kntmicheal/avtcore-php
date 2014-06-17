@@ -24,69 +24,66 @@
  * THE SOFTWARE.
  */
 
-require_once dirname(__FILE__).'/../code/avorium/core/persistence/MySqlPersistenceAdapter.php';
+require_once dirname(__FILE__).'/../code/avorium/core/persistence/OraclePersistenceAdapter.php';
 require_once dirname(__FILE__).'/AbstractPersistenceAdapterTest.php';
 
 /**
- * Persistence adapter tests especially for MySQL databases.
+ * Persistence adapter tests especially for ORACLE databases.
  */
-class MySqlPersistenceAdapterTest extends AbstractPersistenceAdapterTest {
+class OraclePersistenceAdapterTest extends AbstractPersistenceAdapterTest {
 	
     /**
-     * Defines the MySQL persistence adapter to be used and prepares the
+     * Defines the ORACLE persistence adapter to be used and prepares the
      * database (cleans tables).
      */
     protected function setUp() {
         parent::setUp();
-		$this->host = $GLOBALS['TEST_MYSQL_DB_HOST'];
-		$this->database = $GLOBALS['TEST_MYSQL_DB_DATABASE'];
-		$this->username = $GLOBALS['TEST_MYSQL_DB_USERNAME']; 
-		$this->password = $GLOBALS['TEST_MYSQL_DB_PASSWORD'];
+		$this->host = $GLOBALS['TEST_ORACLE_DB_HOST'];
+		$this->username = $GLOBALS['TEST_ORACLE_DB_USERNAME']; 
+		$this->password = $GLOBALS['TEST_ORACLE_DB_PASSWORD'];
         $this->persistenceAdapter = 
-            new avorium_core_persistence_MySqlPersistenceAdapter(
+            new avorium_core_persistence_OraclePersistenceAdapter(
                 $this->host, 
-                $this->database, 
                 $this->username, 
                 $this->password
             );
-        $this->mysqli = mysqli_connect(
-            $this->host, 
+        $this->oci = oci_connect(
             $this->username, 
-            $this->password, 
-            $this->database
+            $this->password,
+            $this->host 
         );
         // Clean database tables by recreating them
-        $this->mysqli->query('drop table potest');
-        $this->mysqli->query('CREATE TABLE POTEST (UUID VARCHAR(40) NOT NULL, BOOLEAN_VALUE tinyint, INT_VALUE int, STRING_VALUE varchar(255), PRIMARY KEY (UUID))');
+        $this->executeQuery('BEGIN  EXECUTE IMMEDIATE \'DROP TABLE POTEST\'; EXCEPTION WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF; END;');
+        $this->executeQuery('create table POTEST (UUID NVARCHAR2(40) NOT NULL, BOOLEAN_VALUE NUMBER(1), INT_VALUE NUMBER(38), STRING_VALUE NVARCHAR2(255), PRIMARY KEY (UUID))');
     }
 
     protected function executeQuery($query) {
-        $resultset = $this->mysqli->query($query);
         $result = array();
-        if ($resultset === true || $resultset === false) {
-            return $result;
-        } // Can happen with statements which have no result (CREATE TABLE)
-        while ($row = $resultset->fetch_array()) {
-            $result[] = $row;
-        }
+		$statement = oci_parse($this->oci, $query);
+        oci_execute($statement);
+		if (oci_statement_type($statement) === 'SELECT') {
+			while ($row = oci_fetch_array($statement)) {
+				$result[] = $row;
+			}
+		}
+		oci_free_statement($statement);
         return $result;
     }
 
     protected function escape($string) {
-        return mysqli_real_escape_string($this->mysqli, $string);
+		return str_replace('\'', '\'\'', $string);
     }
 
     protected function getErrornousPersistenceAdapter() {
-        return new avorium_core_persistence_MySqlPersistenceAdapter(
+        return new avorium_core_persistence_OraclePersistenceAdapter(
             'wronghost', 
-            'wrongdatabase', 
             'wrongusername', 
             'wrongpassword'
         );
     }
 
 	protected function createTestTable() {
-        $this->executeQuery('CREATE TABLE POTEST (UUID VARCHAR(40) NOT NULL, PRIMARY KEY (UUID))');
+        $this->executeQuery('create table POTEST (UUID NVARCHAR2(40) NOT NULL, PRIMARY KEY (UUID))');
 	}
 
 	// All other test methods are defined in the parent abstract class.

@@ -3,13 +3,13 @@
 	<php>
 		<!-- These settings are available as $_GLOBAL variables in PHPUnit -->
 		<!-- See http://phpunit.de/manual/3.7/en/database.html -->
-		<var name="TEST_MYSQL_DB_HOST" value="127.0.0.1" />
+		<var name="TEST_MYSQL_DB_HOST" value="192.168.1.3" />
 		<var name="TEST_MYSQL_DB_USERNAME" value="avtcoretest" />
 		<var name="TEST_MYSQL_DB_PASSWORD" value="avtcoretest" />
 		<var name="TEST_MYSQL_DB_DATABASE" value="avtcoretest" />
-		<var name="TEST_ORACLE_DB_HOST" value="localhost/XE" />
-		<var name="TEST_ORACLE_DB_USERNAME" value="avtcoretest" />
-		<var name="TEST_ORACLE_DB_PASSWORD" value="avtcoretest" />
+		<var name="TEST_ORACLE_DB_HOST" value="192.168.1.3/XE" />
+		<var name="TEST_ORACLE_DB_USERNAME" value="apsis" />
+		<var name="TEST_ORACLE_DB_PASSWORD" value="apsis" />
 	</php>
 	<testsuites>
 		<testsuite name="avtcore">

@@ -29,40 +29,6 @@
  */
 abstract class avorium_core_persistence_AbstractPersistenceAdapter {
 
-    private $db = false;
-
-    /**
-     * Derived classes must open and return a database connection here.
-     * Used in getDatabase() when no database connection is open.
-     * 
-     * @return object Handle to a database connection.
-     */
-    protected abstract function openDatabase();
-
-    /**
-     * Derived classes must escape and return the given string in that way,
-     * that it can be used in SQL queries without the risk of SQL
-     * injections.
-     * 
-     * @param string $string String to escape
-     * @return string Escaped input string.
-     */
-    public abstract function escape($string);
-
-    /**
-     * Returns the current database connection. Opens a new connection with
-     * openDatabase() whe no connection is open.
-     * 
-     * @return object Database reference. Type differs from database to
-     * database (mysqli, oci, etc.)
-     */
-    protected function getDatabase() {
-        if (!$this->db) {
-            $this->db = $this->openDatabase();
-        }
-        return $this->db;
-    }
-
     /**
      * Returns all entries of a database table as array of objects where
      * the object fields have the name of the columns.
@@ -74,17 +40,7 @@ abstract class avorium_core_persistence_AbstractPersistenceAdapter {
      * @return array Array of persistent objects casted into the given 
      * class.
      */
-    public function getAll($persistentobjectclass) {
-        if (!is_subclass_of($persistentobjectclass, 'avorium_core_persistence_PersistentObject')) {
-            throw new Exception('The given class is not derived from avorium_core_persistence_PersistentObject. But this is needed to extract the table name!');
-        }
-        $tablename = (new $persistentobjectclass())->tablename;
-        $escapedtablename = $this->escape($tablename);
-        if (strlen($escapedtablename) < 1) {
-            throw new Exception('Could not determine table name from persistent object annotations.');
-        }
-        return $this->executeMultipleResultQuery('select * from '.$escapedtablename, $persistentobjectclass);
-    }
+    public abstract function getAll($persistentobjectclass);
 
     /**
      * Returns a data object from the given table with the given uuid.
@@ -96,17 +52,7 @@ abstract class avorium_core_persistence_AbstractPersistenceAdapter {
      * object
      * @return object Persistent object casted into the given class.
      */
-    public function get($persistentobjectclass, $uuid) {
-        if (!is_subclass_of($persistentobjectclass, 'avorium_core_persistence_PersistentObject')) {
-            throw new Exception('The given class is not derived from avorium_core_persistence_PersistentObject. But this is needed to extract the table name!');
-        }
-        $tablename = (new $persistentobjectclass())->tablename;
-        $escapedtablename = $this->escape($tablename);
-        if (strlen($escapedtablename) < 1) {
-            throw new Exception('Could not determine table name from persistent object annotations.');
-        }
-        return $this->executeSingleResultQuery('select * from '.$escapedtablename.' where uuid=\''.$this->escape($uuid).'\'', $persistentobjectclass);
-    }
+    public abstract function get($persistentobjectclass, $uuid);
 
     /**
      * Stores the given object with its fields into the database.
@@ -122,22 +68,7 @@ abstract class avorium_core_persistence_AbstractPersistenceAdapter {
      * 
      * @param avorium_core_persistence_PersistentObject $persistentObject
      */
-    public function delete(avorium_core_persistence_PersistentObject $persistentObject) {
-        $tableName = $this->escape($persistentObject->tablename);
-        $uuid = $this->escape($persistentObject->uuid);
-        $this->executeNoResultQuery('delete from '.$tableName.' where uuid=\''.$uuid.'\'');
-    }
-
-    /**
-     * Derived classes must analyze the given resultset and return a row
-     * as object or false, when there are no more elements in the
-     * resultset. For MySQL the function simply returns 
-     * $resultset->fetch_object().
-     * 
-     * @param object $resultset Resultset depending on the database
-     * @return object Row containing columns as properties.
-     */
-    protected abstract function extractRowFromResultset($resultset);
+    public abstract function delete(avorium_core_persistence_PersistentObject $persistentObject);
     
     /**
      * Returns an array of objects from the given query. When a persistent
@@ -150,21 +81,8 @@ abstract class avorium_core_persistence_AbstractPersistenceAdapter {
      * @return array Array of persistent objects, either as simple objects
      * (fetch_object()) or casted into the given class.
      */
-    public function executeMultipleResultQuery($query, $persistentobjectclass = null) {
-        $resultset = $this->getDatabase()->query($query);
-        if ($resultset === true) { // Query did not return any result because it was a no result query
-            throw new Exception('Multiple result statement seems to be a no result statement.');
-        }
-        if (!is_object($resultset)) {
-            throw new Exception('Error in query: '.$query);
-        }
-        $result = array();
-        while ($row = $this->extractRowFromResultset($resultset)) {
-            $result[] = $persistentobjectclass !== null ? $this->cast($row, $persistentobjectclass) : $row;
-        }
-        return $result;
-    }
-
+    public abstract function executeMultipleResultQuery($query, $persistentobjectclass = null);
+	
     /**
      * Returns a single object from the given query or null, when no 
      * result was found. When a persistent object class is given, the 
@@ -177,42 +95,15 @@ abstract class avorium_core_persistence_AbstractPersistenceAdapter {
      * @return object Persistent object, either as simple object
      * (fetch_object()) or casted into the given class.
      */
-    public function executeSingleResultQuery($query, $persistentobjectclass = null) {
-        $resultset = $this->getDatabase()->query($query);
-        if ($resultset === true) { // Query did not return any result because it was a no result query
-            throw new Exception('Single result statement seems to be a no result statement.');
-        }
-        if (!is_object($resultset)) { // Error in SQL query
-            throw new Exception('Error in query: '.$query);
-        }
-        $row = $this->extractRowFromResultset($resultset);
-        if (is_null($row)) {
-            return null;
-        }
-        // Check for further results, this seems to be a semantic error
-        if ($this->extractRowFromResultset($resultset)) {
-            throw new Exception('Single result statement returned more than one result.');
-        }
-        $result = $persistentobjectclass !== null ? $this->cast($row, $persistentobjectclass) : $row;
-        return $result;
-    }
-
+    public abstract function executeSingleResultQuery($query, $persistentobjectclass = null);
+	
     /**
      * Executes the given query without returning a value.
      * 
      * @param string $query Query to execute. There is no check for
      * SQL injections. Caller has to make sure, that the query is correct.
      */
-    public function executeNoResultQuery($query) {
-        $resultset = $this->getDatabase()->query($query);
-        if (!$resultset) { // When false is returned, the query was not successful
-            throw new Exception('Error in query: '.$query);
-        }
-        if ($resultset !== true) { // When not true (but an object is returned, the query was of wrong type
-            throw new Exception('No result statement returned a result.');
-        }
-    }
-    
+    public abstract function executeNoResultQuery($query);    
     /**
      * Analyzes the given metadata structure and tries to find the property
      * name for a given table column name. Returns null when any problem
@@ -224,7 +115,8 @@ abstract class avorium_core_persistence_AbstractPersistenceAdapter {
      */
     private function findPropertyNameForMetaName($metadata, $metaname) {
         foreach ($metadata['properties'] as $key => $value) {
-            if (!is_null($value) && isset($value['name']) && $value['name'] === $metaname) {
+			// ORACLE normally returns all column namens in uppercase when column names are not case sensitive 
+            if (!is_null($value) && isset($value['name']) && strtoupper($value['name']) === strtoupper($metaname)) {
                 return $key;
             }
         }
@@ -244,7 +136,7 @@ abstract class avorium_core_persistence_AbstractPersistenceAdapter {
      * as comparing with the source object! Returns null, 
      * when the given object is not an object
      */
-    private function cast($obj, $classname) {
+    protected function cast($obj, $classname) {
         $metadata = avorium_core_persistence_helper_Annotation::getPersistableMetaData($classname);
         $result = new $classname();
         foreach ($obj as $key => $value) {

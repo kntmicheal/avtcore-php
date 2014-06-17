@@ -29,7 +29,7 @@ require_once dirname(__FILE__).'/../code/avorium/core/persistence/PersistentObje
 /**
  * Test class is representing a persistent object which has different database types. Used in persistence adapter 
  * tests.
- * @avtpersistable(name="potest")
+ * @avtpersistable(name="POTEST")
  */
 class AbstractPersistenceAdapterTestPersistentObjectDifferentType
 extends avorium_core_persistence_PersistentObject {

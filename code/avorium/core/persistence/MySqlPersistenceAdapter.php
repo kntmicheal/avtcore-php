@@ -41,17 +41,37 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
      * @param string $password Password as clear text
      */
     public function __construct($host, $database, $username, $password) {
-	$this->host = $host;
+		$this->host = $host;
         $this->database = $database;
         $this->username = $username;
         $this->password = $password;
     }
 
-    protected function openDatabase() {
-        return mysqli_connect($this->host, $this->username, $this->password, $this->database);
+	/**
+	 * @var object Database connection used in all functions.
+	 */
+	private $db = null;
+	
+	/**
+	 * Returns the current database connection resource. Creates a connection
+	 * when none exists.
+	 * 
+	 * @return object MySQL database resource
+	 */
+    private function getDatabase() {
+		if ($this->db === null) {
+			$this->db = mysqli_connect($this->host, $this->username, $this->password, $this->database);
+		}
+		return $this->db;
     }
 
-    public function escape($string) {
+	/**
+	 * Escapes the given string for using it in an SQL statement.
+	 * 
+	 * @param string $string String to escape
+	 * @return string Escaped string
+	 */
+    private function escape($string) {
         return mysqli_real_escape_string($this->getDatabase(), $string);
     }
 
@@ -98,15 +118,15 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
     private function createTable($propertiesMetaData, $tableName) {
         // Table does not exist, create it
         $columns = array();
-        $columns[] = 'uuid varchar(40) NOT NULL';
+        $columns[] = 'UUID VARCHAR(40) NOT NULL';
         foreach ($propertiesMetaData as $definition) {
-            if ($definition['name'] !== 'uuid') {
+            if ($definition['name'] !== 'UUID') {
                 $columntype = $this->getDatabaseType($definition['type']);
                 $columnsize = isset($definition['size']) ? '('.$definition['size'].')' : '';
                 $columns[] = $this->escape($definition['name']). ' '.$columntype.$columnsize;
             }
         }
-        $columns[] = 'PRIMARY KEY (uuid)';
+        $columns[] = 'PRIMARY KEY (UUID)';
         $query = 'CREATE TABLE '.$tableName.' ('.implode(',', $columns).')';
         $this->executeNoResultQuery($query);
     }
@@ -124,7 +144,7 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
                     // Check whether to try to change the type. This may be a data consistency risk
                     $existingcolumntype = substr($existingcolumn->Type, 0, strpos($existingcolumn->Type, '('));
                     if (strtolower($existingcolumntype) !== strtolower($columntype)) {
-                        throw new Exception('Changing the column type is not supported. Database:'.$existingcolumntype.', persistent object:'.$columntype);
+                        throw new Exception('Changing the column type is not supported.');
                     }
                     break;
                 }
@@ -185,8 +205,79 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
         }
     }
 
-    protected function extractRowFromResultset($resultset) {
-        return $resultset->fetch_object();
+    public function executeMultipleResultQuery($query, $persistentobjectclass = null) {
+        $resultset = $this->getDatabase()->query($query);
+        if ($resultset === true) { // Query did not return any result because it was a no result query
+            throw new Exception('Multiple result statement seems to be a no result statement.');
+        }
+        if (!is_object($resultset)) {
+            throw new Exception('Error in query: '.$query);
+        }
+        $result = array();
+        while ($row = $resultset->fetch_object()) {
+            $result[] = $persistentobjectclass !== null ? $this->cast($row, $persistentobjectclass) : $row;
+        }
+        return $result;
     }
+
+	public function executeSingleResultQuery($query, $persistentobjectclass = null) {
+        $resultset = $this->getDatabase()->query($query);
+        if ($resultset === true) { // Query did not return any result because it was a no result query
+            throw new Exception('Single result statement seems to be a no result statement.');
+        }
+        if (!is_object($resultset)) { // Error in SQL query
+            throw new Exception('Error in query: '.$query);
+        }
+        $row = $resultset->fetch_object();
+        if (is_null($row)) {
+            return null;
+        }
+        // Check for further results, this seems to be a semantic error
+        if ($resultset->fetch_object()) {
+            throw new Exception('Single result statement returned more than one result.');
+        }
+        $result = $persistentobjectclass !== null ? $this->cast($row, $persistentobjectclass) : $row;
+        return $result;
+	}
+
+	public function executeNoResultQuery($query) {
+        $resultset = $this->getDatabase()->query($query);
+        if (!$resultset) { // When false is returned, the query was not successful
+            throw new Exception('Error in query: '.$query);
+        }
+        if ($resultset !== true) { // When not true (but an object is returned, the query was of wrong type
+            throw new Exception('No result statement returned a result.');
+        }
+	}
+
+	public function getAll($persistentobjectclass) {
+        if (!is_subclass_of($persistentobjectclass, 'avorium_core_persistence_PersistentObject')) {
+            throw new Exception('The given class is not derived from avorium_core_persistence_PersistentObject. But this is needed to extract the table name!');
+        }
+        $tablename = (new $persistentobjectclass())->tablename;
+        $escapedtablename = $this->escape($tablename);
+        if (strlen($escapedtablename) < 1) {
+            throw new Exception('Could not determine table name from persistent object annotations.');
+        }
+        return $this->executeMultipleResultQuery('select * from '.$escapedtablename, $persistentobjectclass);
+	}
+
+	public function get($persistentobjectclass, $uuid) {
+        if (!is_subclass_of($persistentobjectclass, 'avorium_core_persistence_PersistentObject')) {
+            throw new Exception('The given class is not derived from avorium_core_persistence_PersistentObject. But this is needed to extract the table name!');
+        }
+        $tablename = (new $persistentobjectclass())->tablename;
+        $escapedtablename = $this->escape($tablename);
+        if (strlen($escapedtablename) < 1) {
+            throw new Exception('Could not determine table name from persistent object annotations.');
+        }
+        return $this->executeSingleResultQuery('select * from '.$escapedtablename.' where uuid=\''.$this->escape($uuid).'\'', $persistentobjectclass);
+	}
+
+	public function delete(\avorium_core_persistence_PersistentObject $persistentObject) {
+        $tableName = $this->escape($persistentObject->tablename);
+        $uuid = $this->escape($persistentObject->uuid);
+        $this->executeNoResultQuery('delete from '.$tableName.' where uuid=\''.$uuid.'\'');
+	}
 
 }

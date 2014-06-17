@@ -30,7 +30,7 @@ require_once dirname(__FILE__).'/../code/avorium/core/persistence/PersistentObje
  * Test class is representing a persistent object which is not derived from
  * avorium_core_persistence_PersistentObject. Used in persistence adapter 
  * tests.
- * @avtpersistable(name="potest")
+ * @avtpersistable(name="POTEST")
  */
 class AbstractPersistenceAdapterTestNoPersistentObject {
 

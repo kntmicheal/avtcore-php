@@ -56,7 +56,7 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
         // Store new record
         $this->getPersistenceAdapter()->save($po);
         // Get record back from database
-        $result = $this->executeQuery('select * from potest where uuid=\''.$po->uuid.'\'');
+        $result = $this->executeQuery('select * from potest where UUID=\''.$po->uuid.'\'');
         // Records must be unique
         $this->assertEquals($po->booleanValue, (bool)$result[0]['BOOLEAN_VALUE'], 'Boolean value from database differs from the boolean value of the persistent object.');
         $this->assertEquals($po->intValue, intval($result[0]['INT_VALUE']), 'Integer value from database differs from the int value of the persistent object.');
@@ -75,7 +75,7 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
         $po->stringValue = 'Hallo Welt!';
         // Store new record
         $this->getPersistenceAdapter()->save($po);
-        // Remember uuid
+        // Remember UUID
         $uuid = $po->uuid;
         // Update values;
         $po->booleanValue = false;
@@ -84,7 +84,7 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
         // Update record
         $this->getPersistenceAdapter()->save($po);
         // Get record back from database
-        $result = $this->executeQuery('select * from potest where uuid=\''.$uuid.'\'');
+        $result = $this->executeQuery('select * from potest where UUID=\''.$uuid.'\'');
         // Records must be unique
         $this->assertEquals($po->booleanValue, (bool)$result[0]['BOOLEAN_VALUE'], 'Boolean value from database differs from the boolean value of the persistent object.');
         $this->assertEquals($po->intValue, intval($result[0]['INT_VALUE']), 'Integer value from database differs from the int value of the persistent object.');
@@ -101,11 +101,11 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
         $int = 1234567;
         $string = 'avorium';
         // Write data to the database
-        $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
+        $this->executeQuery('insert into potest (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
         // Read data out and cast it to persistent object
         $po = $this->getPersistenceAdapter()->get('AbstractPersistenceAdapterTestPersistentObject', $uuid);
         // Compare properties
-        $this->assertEquals($uuid, $po->uuid, 'Uuid value from persistent object differs from the uuid value of the database.');
+        $this->assertEquals($uuid, $po->uuid, 'Uuid value from persistent object differs from the UUID value of the database.');
         $this->assertEquals($bool, $po->booleanValue, 'Boolean value from persistent object differs from the boolean value of the database.');
         $this->assertEquals($int, $po->intValue, 'Integer value from persistent object differs from the int value of the database.');
         $this->assertEquals($string, $po->stringValue, 'String value from persistent object differs from the string value of the database.');
@@ -122,7 +122,7 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
         $int = 1234567;
         $string = 'avorium';
         // Write data to the database
-        $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
+        $this->executeQuery('insert into potest (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
         // Read data out and cast it to persistent object
         $po = $this->getPersistenceAdapter()->get('AbstractPersistenceAdapterTestPersistentObject', $uuid);
         $this->assertNotNull($po, 'Persistent object was not stored in database.');
@@ -137,19 +137,19 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
      */
     public function testReadMultipleRecords() {
         $records = [
-            ['uuid' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
-            ['uuid' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
-            ['uuid' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+            ['UUID' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
         ];
         // Write data to the database
         foreach ($records as $record) {
-            $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['uuid'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
+            $this->executeQuery('insert into potest (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['UUID'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
         }
         // Read data out and cast it to persistent object
         $pos = $this->getPersistenceAdapter()->getAll('AbstractPersistenceAdapterTestPersistentObject');
         $this->assertEquals(count($records), count($pos), 'Wrong number of database records found.');
         for($i = 0; $i < count($pos); $i++)  {
-            $this->assertEquals($records[$i]['uuid'], $pos[$i]->uuid, 'Uuid value from persistent object differs from the uuid value of the database.');
+            $this->assertEquals($records[$i]['UUID'], $pos[$i]->uuid, 'Uuid value from persistent object differs from the UUID value of the database.');
             $this->assertEquals($records[$i]['bool'], $pos[$i]->booleanValue, 'Boolean value from persistent object differs from the boolean value of the database.');
             $this->assertEquals($records[$i]['int'], $pos[$i]->intValue, 'Integer value from persistent object differs from the int value of the database.');
             $this->assertEquals($records[$i]['string'], $pos[$i]->stringValue, 'String value from persistent object differs from the string value of the database.');
@@ -166,12 +166,12 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
         $int = 1234567;
         $string = 'avorium';
         // Write data to the database
-        $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
+        $this->executeQuery('insert into potest (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
         // Read data out and cast it to persistent object with incomplete metadata
         $po = $this->getPersistenceAdapter()->get('AbstractPersistenceAdapterTestPersistentObjectWithIncompleteMetadata', $uuid);
         // Compare properties
         // UUID must be there
-        $this->assertEquals($uuid, $po->uuid, 'Uuid value from persistent object differs from the uuid value of the database.');
+        $this->assertEquals($uuid, $po->uuid, 'Uuid value from persistent object differs from the UUID value of the database.');
         // BOOLEAN_VALUE must not be set correctly because annotation is incomplete
         $this->assertNotEquals($bool, $po->BOOLEAN_VALUE, 'Boolean value from persistent object differs from the boolean value of the database.');
         // INT_VALUE must not be set correctly there because this property has no annotation
@@ -190,7 +190,7 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
         $int = 1234567;
         $string = 'avorium';
         // Write data to the database
-        $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
+        $this->executeQuery('insert into potest (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
         // Read data out and cast it to persistent object with incomplete metadata
         $this->setExpectedException('Exception', 'Could not determine table name from persistent object annotations.');
         // Here should come up an exception. It should not be possible to match to an class without knowing from which table to extract the date
@@ -203,13 +203,13 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
      */
     public function testGetAllMissingMetadata() {
         $records = [
-            ['uuid' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
-            ['uuid' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
-            ['uuid' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+            ['UUID' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
         ];
         // Write data to the database
         foreach ($records as $record) {
-            $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['uuid'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
+            $this->executeQuery('insert into potest (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['UUID'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
         }
         // Read data out and cast it to persistent object with incomplete metadata
         $this->setExpectedException('Exception', 'Could not determine table name from persistent object annotations.');
@@ -227,10 +227,10 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
         $int = 1234567;
         $string = 'avorium';
         // Write data to the database
-        $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
+        $this->executeQuery('insert into potest (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
         // Read data out and cast it to persistent object with incomplete metadata
         // Here should come up an exception. It should not be possible to match to an class without knowing from which table to extract the date
-        $query = 'select * from potest where uuid = \''.$uuid.'\'';
+        $query = 'select * from potest where UUID = \''.$uuid.'\'';
         $po = $this->getPersistenceAdapter()->executeSingleResultQuery($query, 'AbstractPersistenceAdapterTestPersistentObjectWithoutMetadata');
         // Should return a result because when casting to an object the missing class metadata is irrelevant
         $this->assertNotNull($po, 'The result is null.');
@@ -242,15 +242,15 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
      */
     public function testMultipleResultMissingMetadata() {
         $records = [
-            ['uuid' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
-            ['uuid' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
-            ['uuid' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+            ['UUID' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
         ];
         // Write data to the database
         foreach ($records as $record) {
-            $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['uuid'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
+            $this->executeQuery('insert into potest (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['UUID'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
         }
-        $query = 'select * from potest where uuid in (\'uuid1tRMR1\',\'uuid1tRMR2\',\'uuid1tRMR3\')';
+        $query = 'select * from potest where UUID in (\'uuid1tRMR1\',\'uuid1tRMR2\',\'uuid1tRMR3\')';
         $pos = $this->getPersistenceAdapter()->executeMultipleResultQuery($query, 'AbstractPersistenceAdapterTestPersistentObjectWithoutMetadata');
         // Should return results because when casting to an object the missing class metadata is irrelevant
         $this->assertEquals(count($records), count($pos), 'Wrong number of database records found.');
@@ -266,7 +266,7 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
         $int = 1234567;
         $string = 'avorium';
         // Write data to the database
-        $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
+        $this->executeQuery('insert into potest (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
         // Read data out and cast it to persistent object with incomplete metadata
         $this->setExpectedException('Exception', 'The given class is not derived from avorium_core_persistence_PersistentObject. But this is needed to extract the table name!');
         $this->getPersistenceAdapter()->get('AbstractPersistenceAdapterTestNoPersistentObject', $uuid);
@@ -278,13 +278,13 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
      */
     public function testGetAllNoPersistentObject() {
         $records = [
-            ['uuid' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
-            ['uuid' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
-            ['uuid' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+            ['UUID' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
         ];
         // Write data to the database
         foreach ($records as $record) {
-            $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['uuid'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
+            $this->executeQuery('insert into potest (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['UUID'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
         }
         // Read data out and cast it to persistent object with incomplete metadata
         $this->setExpectedException('Exception', 'The given class is not derived from avorium_core_persistence_PersistentObject. But this is needed to extract the table name!');
@@ -304,7 +304,7 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
         // Store new record
         $this->getPersistenceAdapter()->save($po);
         // Get record back from database
-        $result = $this->executeQuery('select * from potest where uuid=\''.$po->uuid.'\'');
+        $result = $this->executeQuery('select * from potest where UUID=\''.$po->uuid.'\'');
         // Records must be unique
         $this->assertEquals($po->booleanValue, (bool)$result[0]['BOOLEAN_VALUE'], 'Boolean value from database differs from the boolean value of the persistent object.');
         $this->assertEquals($po->intValue, intval($result[0]['INT_VALUE']), 'Integer value from database differs from the int value of the persistent object.');
@@ -316,7 +316,7 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
      */
     public function testCreateTable() {
         // Drop table
-        $this->executeQuery('drop table potest');
+        $this->executeQuery('drop table POTEST');
         // Automatically create table
         $this->getPersistenceAdapter()->updateOrCreateTable('AbstractPersistenceAdapterTestPersistentObject');
         // Insert test data
@@ -325,15 +325,20 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
         $int = 1234567;
         $string = 'avorium';
         // Write data to the database
-        $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
+        $this->executeQuery('insert into potest (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
         // Read data out and cast it to persistent object
         $po = $this->getPersistenceAdapter()->get('AbstractPersistenceAdapterTestPersistentObject', $uuid);
         // Compare properties
-        $this->assertEquals($uuid, $po->uuid, 'Uuid value from persistent object differs from the uuid value of the database.');
+        $this->assertEquals($uuid, $po->uuid, 'Uuid value from persistent object differs from the UUID value of the database.');
         $this->assertEquals($bool, $po->booleanValue, 'Boolean value from persistent object differs from the boolean value of the database.');
         $this->assertEquals($int, $po->intValue, 'Integer value from persistent object differs from the int value of the database.');
         $this->assertEquals($string, $po->stringValue, 'String value from persistent object differs from the string value of the database.');
     }
+	
+	/**
+	 * Derived classes must create a test table here.
+	 */
+	protected abstract function createTestTable();
 
     /**
      * Tests the update of a table for a persistent object
@@ -342,7 +347,7 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
         // Drop table
         $this->executeQuery('drop table potest');
         // Manually create table with UUID column only
-        $this->executeQuery('create table potest (uuid NVARCHAR(40) NOT NULL, PRIMARY KEY (uuid))');
+		$this->createTestTable();
         // Automatically update table
         $this->getPersistenceAdapter()->updateOrCreateTable('AbstractPersistenceAdapterTestPersistentObject');
         // Insert test data
@@ -351,11 +356,11 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
         $int = 1234567;
         $string = 'avorium';
         // Write data to the database
-        $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
+        $this->executeQuery('insert into potest (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
         // Read data out and cast it to persistent object
         $po = $this->getPersistenceAdapter()->get('AbstractPersistenceAdapterTestPersistentObject', $uuid);
         // Compare properties
-        $this->assertEquals($uuid, $po->uuid, 'Uuid value from persistent object differs from the uuid value of the database.');
+        $this->assertEquals($uuid, $po->uuid, 'Uuid value from persistent object differs from the UUID value of the database.');
         $this->assertEquals($bool, $po->booleanValue, 'Boolean value from persistent object differs from the boolean value of the database.');
         $this->assertEquals($int, $po->intValue, 'Integer value from persistent object differs from the int value of the database.');
         $this->assertEquals($string, $po->stringValue, 'String value from persistent object differs from the string value of the database.');
@@ -366,20 +371,20 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
      */
     public function testMultipleResultQuery() {
         $records = [
-            ['uuid' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
-            ['uuid' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
-            ['uuid' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+            ['UUID' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
         ];
         // Write data to the database
         foreach ($records as $record) {
-            $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['uuid'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
+            $this->executeQuery('insert into potest (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['UUID'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
         }
         // Read data out and cast it to persistent object
-        $query = 'select * from potest where uuid in (\'uuid1tRMR1\',\'uuid1tRMR2\',\'uuid1tRMR3\')';
+        $query = 'select * from potest where UUID in (\'uuid1tRMR1\',\'uuid1tRMR2\',\'uuid1tRMR3\')';
         $pos = $this->getPersistenceAdapter()->executeMultipleResultQuery($query, 'AbstractPersistenceAdapterTestPersistentObject');
         $this->assertEquals(count($records), count($pos), 'Wrong number of database records found.');
         for($i = 0; $i < count($pos); $i++)  {
-            $this->assertEquals($records[$i]['uuid'], $pos[$i]->uuid, 'Uuid value from persistent object differs from the uuid value of the database.');
+            $this->assertEquals($records[$i]['UUID'], $pos[$i]->uuid, 'Uuid value from persistent object differs from the UUID value of the database.');
             $this->assertEquals($records[$i]['bool'], $pos[$i]->booleanValue, 'Boolean value from persistent object differs from the boolean value of the database.');
             $this->assertEquals($records[$i]['int'], $pos[$i]->intValue, 'Integer value from persistent object differs from the int value of the database.');
             $this->assertEquals($records[$i]['string'], $pos[$i]->stringValue, 'String value from persistent object differs from the string value of the database.');
@@ -395,12 +400,12 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
         $int = 1234567;
         $string = 'avorium';
         // Write data to the database
-        $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
+        $this->executeQuery('insert into potest (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
         // Read data out and cast it to persistent object
-        $query = 'select * from potest where uuid = \'abcdefg\'';
+        $query = 'select * from potest where UUID = \'abcdefg\'';
         $po = $this->getPersistenceAdapter()->executeSingleResultQuery($query, 'AbstractPersistenceAdapterTestPersistentObject');
         // Compare properties
-        $this->assertEquals($uuid, $po->uuid, 'Uuid value from persistent object differs from the uuid value of the database.');
+        $this->assertEquals($uuid, $po->uuid, 'Uuid value from persistent object differs from the UUID value of the database.');
         $this->assertEquals($bool, $po->booleanValue, 'Boolean value from persistent object differs from the boolean value of the database.');
         $this->assertEquals($int, $po->intValue, 'Integer value from persistent object differs from the int value of the database.');
         $this->assertEquals($string, $po->stringValue, 'String value from persistent object differs from the string value of the database.');
@@ -411,23 +416,23 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
      */
     public function testMultipleResultQueryWithoutPersistentObject() {
         $records = [
-            ['uuid' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
-            ['uuid' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
-            ['uuid' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+            ['UUID' => 'uuid1tRMR1', 'BOOL' => 0, 'INT' => 10, 'STRING' => 'testReadMultipleRecords 1'],
+            ['UUID' => 'uuid1tRMR2', 'BOOL' => 1, 'INT' => 20, 'STRING' => 'testReadMultipleRecords 2'],
+            ['UUID' => 'uuid1tRMR3', 'BOOL' => 0, 'INT' => 30, 'STRING' => 'testReadMultipleRecords 3']
         ];
         // Write data to the database
         foreach ($records as $record) {
-            $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['uuid'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
+            $this->executeQuery('insert into potest (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['UUID'].'\','.($record['BOOL'] ? 1:0).','.$record['INT'].', \''.$record['STRING'].'\')');
         }
         // Read data out
-        $query = 'select * from potest where uuid in (\'uuid1tRMR1\',\'uuid1tRMR2\',\'uuid1tRMR3\')';
+        $query = 'select * from POTEST where UUID in (\'uuid1tRMR1\',\'uuid1tRMR2\',\'uuid1tRMR3\')';
         $pos = $this->getPersistenceAdapter()->executeMultipleResultQuery($query);
         $this->assertEquals(count($records), count($pos), 'Wrong number of database records found.');
         for($i = 0; $i < count($pos); $i++)  {
-            $this->assertEquals($records[$i]['uuid'], $pos[$i]->uuid, 'Uuid value from persistent object differs from the uuid value of the database.');
-            $this->assertEquals($records[$i]['bool'], $pos[$i]->BOOLEAN_VALUE, 'Boolean value from persistent object differs from the boolean value of the database.');
-            $this->assertEquals($records[$i]['int'], $pos[$i]->INT_VALUE, 'Integer value from persistent object differs from the int value of the database.');
-            $this->assertEquals($records[$i]['string'], $pos[$i]->STRING_VALUE, 'String value from persistent object differs from the string value of the database.');
+            $this->assertEquals($records[$i]['UUID'], $pos[$i]->UUID, 'Uuid value from persistent object differs from the UUID value of the database.');
+            $this->assertEquals($records[$i]['BOOL'], $pos[$i]->BOOLEAN_VALUE, 'Boolean value from persistent object differs from the boolean value of the database.');
+            $this->assertEquals($records[$i]['INT'], $pos[$i]->INT_VALUE, 'Integer value from persistent object differs from the int value of the database.');
+            $this->assertEquals($records[$i]['STRING'], $pos[$i]->STRING_VALUE, 'String value from persistent object differs from the string value of the database.');
         }
     }
     
@@ -440,12 +445,12 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
         $int = 1234567;
         $string = 'avorium';
         // Write data to the database
-        $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
+        $this->executeQuery('insert into potest (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
         // Read data out and cast it to persistent object
-        $query = 'select * from potest where uuid = \'abcdefg\'';
+        $query = 'select * from potest where UUID = \'abcdefg\'';
         $po = $this->getPersistenceAdapter()->executeSingleResultQuery($query);
         // Compare properties
-        $this->assertEquals($uuid, $po->uuid, 'Uuid value from persistent object differs from the uuid value of the database.');
+        $this->assertEquals($uuid, $po->UUID, 'Uuid value from persistent object differs from the UUID value of the database.');
         $this->assertEquals($bool, $po->BOOLEAN_VALUE, 'Boolean value from persistent object differs from the boolean value of the database.');
         $this->assertEquals($int, $po->INT_VALUE, 'Integer value from persistent object differs from the int value of the database.');
         $this->assertEquals($string, $po->STRING_VALUE, 'String value from persistent object differs from the string value of the database.');
@@ -460,12 +465,12 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
         $int = 1234567;
         $string = 'avorium';
         // Store new record with executeNoResultQuery()
-        $query = 'insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')';
+        $query = 'insert into POTEST (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')';
         $this->getPersistenceAdapter()->executeNoResultQuery($query);
         // Get record back from database
-        $result = $this->executeQuery('select * from potest where uuid=\''.$uuid.'\'');
+        $result = $this->executeQuery('select * from POTEST where UUID=\''.$uuid.'\'');
         // Records must be unique
-        $this->assertEquals($uuid, $result[0]['uuid'], 'Uuid value from persistent object differs from the uuid value of the database.');
+        $this->assertEquals($uuid, $result[0]['UUID'], 'Uuid value from persistent object differs from the UUID value of the database.');
         $this->assertEquals($bool, (bool)$result[0]['BOOLEAN_VALUE'], 'Boolean value from persistent object differs from the boolean value of the database.');
         $this->assertEquals($int, intval($result[0]['INT_VALUE']), 'Integer value from persistent object differs from the int value of the database.');
         $this->assertEquals($string, $result[0]['STRING_VALUE'], 'String value from persistent object differs from the string value of the database.');
@@ -483,11 +488,11 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
         $int = 1234567;
         $string = 'avorium';
         // Write data to the database
-        $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
+        $this->executeQuery('insert into potest (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
         // Read data out and cast it to persistent object
         $po = $this->getPersistenceAdapter()->get('AbstractPersistenceAdapterTestPersistentObject', $readuuid);
         // Compare properties
-        $this->assertNull($po, 'Database should not return a result when requesting an unknown uuid.');
+        $this->assertNull($po, 'Database should not return a result when requesting an unknown UUID.');
     }
     
     /**
@@ -496,7 +501,7 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
      */
     public function testChangeColumnDefinition() {
         // Automatically update table with persistent object with different type
-        $this->setExpectedException('Exception', 'Changing the column type is not supported. Database:varchar, persistent object:int');
+        $this->setExpectedException('Exception', 'Changing the column type is not supported.');
         $this->getPersistenceAdapter()->updateOrCreateTable('AbstractPersistenceAdapterTestPersistentObjectDifferentType');
     }
 
@@ -525,7 +530,7 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
         $int = 1234567;
         $string = 'avorium';
         // Write data to the database
-        $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
+        $this->executeQuery('insert into potest (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
         // Read data out and cast it to persistent object
         $this->setExpectedException('Exception', 'Database column type \'unknowntype\' is not known to the persistence adapter.');
         $this->getPersistenceAdapter()->get('AbstractPersistenceAdapterTestPersistentObjectUnknownType', $uuid);
@@ -551,7 +556,7 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
         // Drop table
         $this->executeQuery('drop table potest');
         // Manually create table with UUID column only
-        $this->executeQuery('create table potest (uuid NVARCHAR(40) NOT NULL, PRIMARY KEY (uuid))');
+        $this->createTestTable();
         // Automatically update table
         $this->setExpectedException('Exception', 'Database column type \'unknowntype\' is not known to the persistence adapter.');
         $this->getPersistenceAdapter()->updateOrCreateTable('AbstractPersistenceAdapterTestPersistentObjectUnknownType');
@@ -570,14 +575,14 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
         // Store new record
         $this->getPersistenceAdapter()->save($potowrite);
         // Get record back from database
-        $result = $this->executeQuery('select * from potest where uuid=\''.$potowrite->uuid.'\'');
+        $result = $this->executeQuery('select * from potest where UUID=\''.$potowrite->uuid.'\'');
         // Records must be unique
         $this->assertEquals($potowrite->stringValue, $result[0]['STRING_VALUE'], 'String value from database differs from the string value of the persistent object.');
         // Now test tehe same in the other (read) direction
         $uuid = 'abcdefg';
         $string = '°!"§$%&/()=?`*\'>;:_+öä#<,.-²³¼¹½¬{[]}\\¸~’–…·|@\t\r\n';
         // Write data to the database
-        $this->executeQuery('insert into potest (uuid, STRING_VALUE) values (\''.$uuid.'\', \''.$this->escape($string).'\')');
+        $this->executeQuery('insert into potest (UUID, STRING_VALUE) values (\''.$uuid.'\', \''.$this->escape($string).'\')');
         // Read data out and cast it to persistent object
         $potoread = $this->getPersistenceAdapter()->get('AbstractPersistenceAdapterTestPersistentObject', $uuid);
         // Compare properties
@@ -629,13 +634,13 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
      */
     public function testSingleResultQueryWithMultipleResultStatement() {
         $records = [
-            ['uuid' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
-            ['uuid' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
-            ['uuid' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+            ['UUID' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
         ];
         // Write data to the database
         foreach ($records as $record) {
-            $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['uuid'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
+            $this->executeQuery('insert into potest (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['UUID'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
         }
         $this->setExpectedException('Exception', 'Single result statement returned more than one result.');
         $this->getPersistenceAdapter()->executeSingleResultQuery('select * from potest');
@@ -662,9 +667,9 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
         $int = 1234567;
         $string = 'avorium';
         // Write data to the database
-        $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
+        $this->executeQuery('insert into potest (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
         // Read data out and cast it to persistent object
-        $query = 'select * from potest where uuid = \'abcdefg\'';
+        $query = 'select * from potest where UUID = \'abcdefg\'';
         $pos = $this->getPersistenceAdapter()->executeMultipleResultQuery($query);
         $this->assertEquals(1, count($pos), 'Wrong number of database records found.');
     }
@@ -690,9 +695,9 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
         $int = 1234567;
         $string = 'avorium';
         // Write data to the database
-        $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
+        $this->executeQuery('insert into potest (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
         $this->setExpectedException('Exception', 'No result statement returned a result.');
-        $query = 'select * from potest where uuid = \'abcdefg\'';
+        $query = 'select * from potest where UUID = \'abcdefg\'';
         $this->getPersistenceAdapter()->executeNoResultQuery($query);
     }
     
@@ -703,13 +708,13 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
      */
     public function testNoResultQueryWithMultipleResultStatement() {
         $records = [
-            ['uuid' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
-            ['uuid' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
-            ['uuid' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+            ['UUID' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
         ];
         // Write data to the database
         foreach ($records as $record) {
-            $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['uuid'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
+            $this->executeQuery('insert into potest (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['UUID'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
         }
         $this->setExpectedException('Exception', 'No result statement returned a result.');
         $query = 'select * from potest';
@@ -740,12 +745,12 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
         $int = 1234567;
         $string = 'avorium';
         // Write data to the database
-        $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
+        $this->executeQuery('insert into potest (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
         // Read data out and cast it to persistent object
-        $query = 'select uuid from potest where uuid = \'abcdefg\'';
+        $query = 'select UUID from potest where UUID = \'abcdefg\'';
         $po = $this->getPersistenceAdapter()->executeSingleResultQuery($query, 'AbstractPersistenceAdapterTestPersistentObject');
         // Compare properties
-        $this->assertEquals($uuid, $po->uuid, 'Uuid value from persistent object differs from the uuid value of the database.');
+        $this->assertEquals($uuid, $po->uuid, 'Uuid value from persistent object differs from the UUID value of the database.');
         // These columns must not match because they were not read out with the query
         $this->assertNotEquals($bool, $po->booleanValue, 'Boolean value from persistent object equals the boolean value of the database.');
         $this->assertNotEquals($int, $po->intValue, 'Integer value from persistent object equals the int value of the database.');
@@ -764,21 +769,21 @@ abstract class AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase
         $int = 1234567;
         $string = 'avorium';
         // Write data to the database
-        $this->executeQuery('insert into potest (uuid, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
+        $this->executeQuery('insert into potest (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
         // Read data out and cast it to persistent object
-        $query = 'select uuid otheruuid, BOOLEAN_VALUE otherbool, INT_VALUE otherint, STRING_VALUE otherstring from potest where uuid = \'abcdefg\'';
+        $query = 'select UUID OTHERUUID, BOOLEAN_VALUE OTHERBOOL, INT_VALUE OTHERINT, STRING_VALUE OTHERSTRING from potest where UUID = \'abcdefg\'';
         $po = $this->getPersistenceAdapter()->executeSingleResultQuery($query, 'AbstractPersistenceAdapterTestPersistentObject');
         // Compare properties
         // These columns must not match because they were not read out with the query
-        $this->assertNotEquals($uuid, $po->uuid, 'Uuid value from persistent object equals the uuid value of the database.');
+        $this->assertNotEquals($uuid, $po->uuid, 'Uuid value from persistent object equals the UUID value of the database.');
         $this->assertNotEquals($bool, $po->booleanValue, 'Boolean value from persistent object equals the boolean value of the database.');
         $this->assertNotEquals($int, $po->intValue, 'Integer value from persistent object equals the int value of the database.');
         $this->assertNotEquals($string, $po->stringValue, 'String value from persistent object equals the string value of the database.');
         // Make sure that the columns from the query are NOT stored as dynamic properties of the object
-        $this->assertFalse(property_exists($po, 'otheruuid'), 'Dynamic property otheruuid exists.');
-        $this->assertFalse(property_exists($po, 'otherbool'), 'Dynamic property otherbool exists.');
-        $this->assertFalse(property_exists($po, 'otherint'), 'Dynamic property otherint exists.');
-        $this->assertFalse(property_exists($po, 'otherstring'), 'Dynamic property otherstring exists.');
+        $this->assertFalse(property_exists($po, 'OTHERUUID'), 'Dynamic property otheruuid exists.');
+        $this->assertFalse(property_exists($po, 'OTHERBOOL'), 'Dynamic property otherbool exists.');
+        $this->assertFalse(property_exists($po, 'OTHERINT'), 'Dynamic property otherint exists.');
+        $this->assertFalse(property_exists($po, 'OTHERSTRING'), 'Dynamic property otherstring exists.');
     }
 
     // helper functions
