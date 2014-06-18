@@ -56,7 +56,7 @@ class MySqlPersistenceAdapterTest extends AbstractPersistenceAdapterTest {
             $this->database
         );
         // Clean database tables by recreating them
-        $this->mysqli->query('drop table potest');
+        $this->mysqli->query('drop table POTEST');
         $this->mysqli->query('CREATE TABLE POTEST (UUID VARCHAR(40) NOT NULL, BOOLEAN_VALUE tinyint, INT_VALUE int, STRING_VALUE varchar(255), PRIMARY KEY (UUID))');
     }
 
