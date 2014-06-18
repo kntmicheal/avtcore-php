@@ -39,11 +39,14 @@ class avorium_core_persistence_OraclePersistenceAdapter extends avorium_core_per
      * @param string $database Name of the database
      * @param string $username Username for the database
      * @param string $password Password as clear text
+     * @param string $nlslang Langauge to use when connecting to the server. Must
+     * match the database language (e.g. 'AL32UTF8')
      */
-    public function __construct($host, $username, $password) {
-		$this->host = $host;
+    public function __construct($host, $username, $password, $nlslang) {
+        $this->host = $host;
         $this->username = $username;
         $this->password = $password;
+        $this->nlslang = $nlslang;
     }
 
 	/**
@@ -52,7 +55,7 @@ class avorium_core_persistence_OraclePersistenceAdapter extends avorium_core_per
 	 * @return object connection to database
 	 */
     private function getDatabase() {
-        return oci_connect($this->username, $this->password, $this->host);
+        return oci_connect($this->username, $this->password, $this->host, $this->nlslang);
     }
 	
 	/**

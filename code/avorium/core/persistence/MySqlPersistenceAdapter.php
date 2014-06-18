@@ -107,7 +107,7 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
                         throw new Exception('Database column type \''.$definition['type'].'\' is not known to the persistence adapter.');
                 }
             }
-            if ($name !== 'uuid') {
+            if ($name !== 'UUID') {
                 $updates[] = $name.'=VALUES('.$name.')';
             }
         }

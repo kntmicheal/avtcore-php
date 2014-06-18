@@ -41,16 +41,19 @@ class OraclePersistenceAdapterTest extends AbstractPersistenceAdapterTest {
 		$this->host = $GLOBALS['TEST_ORACLE_DB_HOST'];
 		$this->username = $GLOBALS['TEST_ORACLE_DB_USERNAME']; 
 		$this->password = $GLOBALS['TEST_ORACLE_DB_PASSWORD'];
+                $this->nlslang= $GLOBALS['TEST_ORALCE_NLS_LANG'];
         $this->persistenceAdapter = 
             new avorium_core_persistence_OraclePersistenceAdapter(
                 $this->host, 
                 $this->username, 
-                $this->password
+                $this->password,
+                $this->nlslang
             );
         $this->oci = oci_connect(
             $this->username, 
             $this->password,
-            $this->host 
+            $this->host,
+            $this->nlslang
         );
         // Clean database tables by recreating them
         $this->executeQuery('BEGIN  EXECUTE IMMEDIATE \'DROP TABLE POTEST\'; EXCEPTION WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF; END;');
@@ -78,7 +81,8 @@ class OraclePersistenceAdapterTest extends AbstractPersistenceAdapterTest {
         return new avorium_core_persistence_OraclePersistenceAdapter(
             'wronghost', 
             'wrongusername', 
-            'wrongpassword'
+            'wrongpassword',
+            'wrongnlslang'
         );
     }
 

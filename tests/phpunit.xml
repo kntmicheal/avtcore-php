@@ -10,6 +10,7 @@
 		<var name="TEST_ORACLE_DB_HOST" value="localhost/XE" />
 		<var name="TEST_ORACLE_DB_USERNAME" value="avtcoretest" />
 		<var name="TEST_ORACLE_DB_PASSWORD" value="avtcoretest" />
+		<var name="TEST_ORALCE_NLS_LANG" value="AL32UTF8" />
 	</php>
 	<testsuites>
 		<testsuite name="avtcore">
