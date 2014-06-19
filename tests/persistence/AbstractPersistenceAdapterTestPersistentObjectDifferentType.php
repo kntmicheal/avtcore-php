@@ -24,14 +24,14 @@
  * THE SOFTWARE.
  */
 
-require_once dirname(__FILE__).'/../code/avorium/core/persistence/PersistentObject.php';
+require_once dirname(__FILE__).'/../../code/avorium/core/persistence/PersistentObject.php';
 
 /**
  * Test class is representing a persistent object which has different database types. Used in persistence adapter 
  * tests.
  * @avtpersistable(name="POTEST")
  */
-class AbstractPersistenceAdapterTestPersistentObjectDifferentType
+class test_persistence_AbstractPersistenceAdapterTestPersistentObjectDifferentType
 extends avorium_core_persistence_PersistentObject {
 
 	/**

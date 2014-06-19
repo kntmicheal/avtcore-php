@@ -24,31 +24,34 @@
  * THE SOFTWARE.
  */
 
-require_once dirname(__FILE__).'/../code/avorium/core/persistence/PersistentObject.php';
+require_once dirname(__FILE__).'/../../code/avorium/core/persistence/PersistentObject.php';
 
 /**
- * Test class is representing a persistent object which is not derived from
- * avorium_core_persistence_PersistentObject. Used in persistence adapter 
- * tests.
+ * Test class is representing a persistent object with incomplete metadata
+ * information. Used in persistence adapter tests.
  * @avtpersistable(name="POTEST")
  */
-class AbstractPersistenceAdapterTestNoPersistentObject {
+class test_persistence_AbstractPersistenceAdapterTestPersistentObjectWithIncompleteMetadata
+extends avorium_core_persistence_PersistentObject {
+	
+	/**
+	 * Must not match to column with same name because of missing name property
+         * 
+	 * @avtpersistable
+	 */
+	public $BOOLEAN_VALUE;
 
 	/**
-	 * Represents a boolean value
-	 * @avtpersistable(name="BOOLEAN_VALUE", type="bool")
+	 * Must not match to database column because of missing annotation
+         * even if property name matches column name
 	 */
-	public $booleanValue;
+	public $INT_VALUE;
 	
 	/**
-	 * Represents an integer value
-	 * @avtpersistable(name="INT_VALUE", type="int")
-	 */
-	public $intValue;
-	
-	/**
-	 * Represents a string value
-	 * @avtpersistable(name="STRING_VALUE", type="string", size=255)
+	 * Must not match to any database content because of missing
+         * persistable attribute
+         * 
+	 * @avtpersistable
 	 */
 	public $stringValue;
 	

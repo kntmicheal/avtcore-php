@@ -24,27 +24,33 @@
  * THE SOFTWARE.
  */
 
-require_once dirname(__FILE__).'/../code/avorium/core/persistence/PersistentObject.php';
-require_once dirname(__FILE__).'/PersistentObjectTestPersistentObject.php';
+require_once dirname(__FILE__).'/../../code/avorium/core/persistence/PersistentObject.php';
 
 /**
- * Tests the functionality of the PersistentObject class, especially the
- * automatic property initialization in the constructor.
+ * Test class is representing a persistent object without metadata
+ * information. Used in persistence adapter tests.
  */
-class PersistentObjectTest extends PHPUnit_Framework_TestCase {
-    
-    public function testPropertyInitialization() {
-        // Initialize persistent object with constructor array
-        $ponormal = new PersistentObjectTestPersistentObject(array(
-            'uuid' => 'abcdef',
-            'booleanValue' => true,
-            'intValue' => 1234567890,
-            'stringValue' => 'Hello world!'
-        ));
-        $this->assertEquals('abcdef', $ponormal->uuid, 'Uuid of persistent object is not as expected.');
-        $this->assertEquals(true, $ponormal->booleanValue, 'Uuid of persistent object is not as expected.');
-        $this->assertEquals(1234567890, $ponormal->intValue, 'Uuid of persistent object is not as expected.');
-        $this->assertEquals('Hello world!', $ponormal->stringValue, 'Uuid of persistent object is not as expected.');
-    }
+class test_persistence_AbstractPersistenceAdapterTestPersistentObjectWithoutMetadata
+extends avorium_core_persistence_PersistentObject {
+	
+	/**
+	 * Must not match to database column because of missing annotation
+         * even if property name matches column name
+	 */
+	public $BOOLEAN_VALUE;
 
+	/**
+	 * Must not match to database column because of missing annotation
+         * even if property name matches column name
+	 */
+	public $INT_VALUE;
+	
+	/**
+	 * Must not match to any database content because of missing
+         * persistable attribute on class level
+         * 
+	 * @avtpersistable(name="STRING_VALUE")
+	 */
+	public $STRING_VALUE;
+	
 }

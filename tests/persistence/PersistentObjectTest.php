@@ -24,32 +24,27 @@
  * THE SOFTWARE.
  */
 
-require_once dirname(__FILE__).'/../code/avorium/core/persistence/PersistentObject.php';
+require_once dirname(__FILE__).'/../../code/avorium/core/persistence/PersistentObject.php';
+require_once dirname(__FILE__).'/PersistentObjectTestPersistentObject.php';
 
 /**
- * Test class is representing a persistent object. Used in persistence adapter 
- * tests.
- * @avtpersistable(name="POTEST")
+ * Tests the functionality of the PersistentObject class, especially the
+ * automatic property initialization in the constructor.
  */
-class AbstractPersistenceAdapterTestPersistentObject
-extends avorium_core_persistence_PersistentObject {
+class test_persistence_PersistentObjectTest extends PHPUnit_Framework_TestCase {
+    
+    public function testPropertyInitialization() {
+        // Initialize persistent object with constructor array
+        $ponormal = new test_persistence_PersistentObjectTestPersistentObject(array(
+            'uuid' => 'abcdef',
+            'booleanValue' => true,
+            'intValue' => 1234567890,
+            'stringValue' => 'Hello world!'
+        ));
+        $this->assertEquals('abcdef', $ponormal->uuid, 'Uuid of persistent object is not as expected.');
+        $this->assertEquals(true, $ponormal->booleanValue, 'Uuid of persistent object is not as expected.');
+        $this->assertEquals(1234567890, $ponormal->intValue, 'Uuid of persistent object is not as expected.');
+        $this->assertEquals('Hello world!', $ponormal->stringValue, 'Uuid of persistent object is not as expected.');
+    }
 
-	/**
-	 * Represents a boolean value
-	 * @avtpersistable(name="BOOLEAN_VALUE", type="bool")
-	 */
-	public $booleanValue;
-	
-	/**
-	 * Represents an integer value
-	 * @avtpersistable(name="INT_VALUE", type="int")
-	 */
-	public $intValue;
-	
-	/**
-	 * Represents a string value
-	 * @avtpersistable(name="STRING_VALUE", type="string", size=255)
-	 */
-	public $stringValue;
-	
 }

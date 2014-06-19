@@ -24,15 +24,14 @@
  * THE SOFTWARE.
  */
 
-require_once dirname(__FILE__).'/../code/avorium/core/persistence/PersistentObject.php';
+require_once dirname(__FILE__).'/../../code/avorium/core/persistence/PersistentObject.php';
 
 /**
- * Test class is representing a persistent object which has a property type
- * which is not known by persistence adapters. Used in persistence adapter 
+ * Test class is representing a persistent object. Used in persistent object 
  * tests.
- * @avtpersistable(name="POTEST")
+ * @avtpersistable(name="potest")
  */
-class AbstractPersistenceAdapterTestPersistentObjectUnknownType
+class test_persistence_PersistentObjectTestPersistentObject
 extends avorium_core_persistence_PersistentObject {
 
 	/**
@@ -48,8 +47,8 @@ extends avorium_core_persistence_PersistentObject {
 	public $intValue;
 	
 	/**
-	 * Unknown type
-	 * @avtpersistable(name="STRING_VALUE", type="unknowntype")
+	 * Represents a string value
+	 * @avtpersistable(name="STRING_VALUE", type="string", size=255)
 	 */
 	public $stringValue;
 	

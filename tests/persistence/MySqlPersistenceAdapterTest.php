@@ -24,13 +24,14 @@
  * THE SOFTWARE.
  */
 
-require_once dirname(__FILE__).'/../code/avorium/core/persistence/MySqlPersistenceAdapter.php';
+require_once dirname(__FILE__).'/../../code/avorium/core/persistence/MySqlPersistenceAdapter.php';
 require_once dirname(__FILE__).'/AbstractPersistenceAdapterTest.php';
 
 /**
  * Persistence adapter tests especially for MySQL databases.
  */
-class MySqlPersistenceAdapterTest extends AbstractPersistenceAdapterTest {
+class test_persistence_MySqlPersistenceAdapterTest 
+extends test_persistence_AbstractPersistenceAdapterTest {
 	
     /**
      * Defines the MySQL persistence adapter to be used and prepares the

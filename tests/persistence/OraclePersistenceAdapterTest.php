@@ -24,13 +24,14 @@
  * THE SOFTWARE.
  */
 
-require_once dirname(__FILE__).'/../code/avorium/core/persistence/OraclePersistenceAdapter.php';
+require_once dirname(__FILE__).'/../../code/avorium/core/persistence/OraclePersistenceAdapter.php';
 require_once dirname(__FILE__).'/AbstractPersistenceAdapterTest.php';
 
 /**
  * Persistence adapter tests especially for ORACLE databases.
  */
-class OraclePersistenceAdapterTest extends AbstractPersistenceAdapterTest {
+class test_persistence_OraclePersistenceAdapterTest 
+extends test_persistence_AbstractPersistenceAdapterTest {
 	
     /**
      * Defines the ORACLE persistence adapter to be used and prepares the

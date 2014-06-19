@@ -13,8 +13,13 @@
 		<var name="TEST_ORALCE_NLS_LANG" value="AL32UTF8" />
 	</php>
 	<testsuites>
-		<testsuite name="avtcore">
+		<testsuite name="All">
 			<directory>./</directory>
 		</testsuite>
 	</testsuites>
+	<filter>
+		<whitelist>
+			<directory suffix=".php">../code/</directory>
+		</whitelist>
+	</filter>
 </phpunit>
