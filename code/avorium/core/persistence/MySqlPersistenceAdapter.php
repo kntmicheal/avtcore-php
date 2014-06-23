@@ -77,18 +77,21 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
 
     public function save(avorium_core_persistence_PersistentObject $persistentObject) {
         $metaData = avorium_core_persistence_helper_Annotation::getPersistableMetaData($persistentObject);
-        $tableName = $this->escape($persistentObject->tablename);
+        $tableName = $this->escapeTableOrColumnName($persistentObject->tablename);
         $inserts = array();
         $values = array();
         $updates = array();
         foreach ($metaData['properties'] as $key => $definition) {
-            $name = $this->escape($definition['name']);
+            $name = $this->escapeTableOrColumnName($definition['name']);
             if ($persistentObject->$key === null) { // Null-values are transferred to database as they are
                 $inserts[] = $name;
                 $values[] = 'NULL';
             } else {
                 $value = $this->escape($persistentObject->$key);
                 $inserts[] = $name;
+				if (!isset($definition['type'])) {
+					throw new Exception('Type of persistent object property not set.');
+				}
                 switch($definition['type']) {
                     case 'bool':
                         $values[] = $value ? 1 : 0;
@@ -123,7 +126,7 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
             if ($definition['name'] !== 'UUID') {
                 $columntype = $this->getDatabaseType($definition['type']);
                 $columnsize = isset($definition['size']) ? '('.$definition['size'].')' : '';
-                $columns[] = $this->escape($definition['name']). ' '.$columntype.$columnsize;
+                $columns[] = $this->escapeTableOrColumnName($definition['name']). ' '.$columntype.$columnsize;
             }
         }
         $columns[] = 'PRIMARY KEY (UUID)';
@@ -161,7 +164,7 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
 
     public function updateOrCreateTable($persistentobjectclass) {
         $metaData = avorium_core_persistence_helper_Annotation::getPersistableMetaData($persistentobjectclass);
-        $tableName = $this->escape($metaData['name']);
+        $tableName = $this->escapeTableOrColumnName($metaData['name']);
         // Erst mal gucken, ob die Tabelle existiert
         if (count($this->executeMultipleResultQuery('show tables like \''.$tableName.'\'')) < 1) {
             // Tabelle existiert noch nicht, also anlegen
@@ -255,10 +258,7 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
             throw new Exception('The given class is not derived from avorium_core_persistence_PersistentObject. But this is needed to extract the table name!');
         }
         $tablename = (new $persistentobjectclass())->tablename;
-        $escapedtablename = $this->escape($tablename);
-        if (strlen($escapedtablename) < 1) {
-            throw new Exception('Could not determine table name from persistent object annotations.');
-        }
+        $escapedtablename = $this->escapeTableOrColumnName($tablename); // table name is set here because it was tested in persistent object constructor
         return $this->executeMultipleResultQuery('select * from '.$escapedtablename, $persistentobjectclass);
 	}
 
@@ -267,17 +267,88 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
             throw new Exception('The given class is not derived from avorium_core_persistence_PersistentObject. But this is needed to extract the table name!');
         }
         $tablename = (new $persistentobjectclass())->tablename;
-        $escapedtablename = $this->escape($tablename);
-        if (strlen($escapedtablename) < 1) {
-            throw new Exception('Could not determine table name from persistent object annotations.');
-        }
+        $escapedtablename = $this->escapeTableOrColumnName($tablename); // table name is set here because it was tested in persistent object constructor
         return $this->executeSingleResultQuery('select * from '.$escapedtablename.' where uuid=\''.$this->escape($uuid).'\'', $persistentobjectclass);
 	}
 
-	public function delete(\avorium_core_persistence_PersistentObject $persistentObject) {
-        $tableName = $this->escape($persistentObject->tablename);
+	public function delete(avorium_core_persistence_PersistentObject $persistentObject) {
+        $tableName = $this->escapeTableOrColumnName($persistentObject->tablename);
         $uuid = $this->escape($persistentObject->uuid);
         $this->executeNoResultQuery('delete from '.$tableName.' where uuid=\''.$uuid.'\'');
+	}
+	
+	/**
+	 * Replaces all spaces, quotes and semicolon in table or column names to 
+	 * prevent SQL injections
+	 */
+	private function escapeTableOrColumnName($tablename) {
+		return str_replace(' ', '', str_replace(';', '', str_replace('\'', '', $tablename)));
+	}
+
+	public function saveDataTable($tablename, $datatable) {
+		// Check parameters for incorrect values
+		if (is_null($tablename)) {
+			throw new Exception('No table name given.');
+		}
+		if (!is_string($tablename)) {
+			throw new Exception('Table name must be a string.');
+		}
+		if (is_null($datatable)) {
+			throw new Exception('No data table given.');
+		}
+		if (!is_a($datatable, 'avorium_core_data_DataTable')) {
+			throw new Exception('Data table is not of correct datatype.');
+		}
+		// Process data table
+		$escapedtablename = $this->escapeTableOrColumnName($tablename);
+		$headernames = $datatable->getHeaders();
+		$columncount = count($headernames);
+		$datamatrix = $datatable->getDataMatrix();
+        $inserts = array();
+        $values = array();
+        $updates = array();
+		// Obtain primary key from database
+		try {
+			$primarykeys = $this->executeMultipleResultQuery('SHOW KEYS FROM '.$escapedtablename.' WHERE KEY_NAME = \'PRIMARY\'');
+		} catch (Exception $ex) {
+			// Happens when the table name is invalid
+			throw new Exception('Invalid table name given: '.$tablename, null, $ex);
+		}
+		// Currently only one primary key is supported, get its column name
+		$primarykeycolumnname = $primarykeys[0]->Column_name;
+		$primarykeycolumnfound = false;
+		foreach ($headernames as $headername) {
+			$escapedheadername = $this->escapeTableOrColumnName($headername);
+			$inserts[] = $escapedheadername;
+			if ($escapedheadername !== $primarykeycolumnname) {
+                $updates[] = $escapedheadername.'=VALUES('.$escapedheadername.')';
+			} else {
+				$primarykeycolumnfound = true;
+			}
+		}
+		if (!$primarykeycolumnfound) {
+			throw new Exception('Expected primary key column '.$primarykeycolumnname.' not found.');
+		}
+		foreach ($datamatrix as $row) {
+			$rowvalues = array();
+			for ($i = 0; $i < $columncount; $i++) {
+				// Distinguish between data types
+				if (is_null($row[$i])) {
+					$rowvalues[] = 'NULL';
+				} else if (is_bool($row[$i])) {
+					$rowvalues[] = $row[$i] ? 1 : 0;
+				} else if (is_numeric($row[$i])) {
+					$rowvalues[] = $row[$i];
+				} else if (is_string($row[$i])) {
+					$rowvalues[] = '\''.$this->escape($row[$i]).'\'';
+				} else {
+					throw new Exception('Unknown datatype: '.gettype($row[$i]));
+				}
+			}
+			$values[] = '('.implode(',', $rowvalues).')';
+		}
+        $query = 'INSERT INTO '.$escapedtablename.' ('.implode(',', $inserts).') VALUES '.implode(',', $values).' ON DUPLICATE KEY UPDATE '.implode(',', $updates);
+        $this->executeNoResultQuery($query);
 	}
 
 }

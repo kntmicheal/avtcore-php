@@ -142,11 +142,10 @@ abstract class avorium_core_persistence_AbstractPersistenceAdapter {
         foreach ($obj as $key => $value) {
             $propertyName = $this->findPropertyNameForMetaName($metadata, $key);
             if (!is_null($propertyName)) {
-                if (isset($metadata['properties'][$propertyName]['type'])) {
-                    $result->$propertyName = $this->castDatabaseValue($value, $metadata['properties'][$propertyName]['type']);
-                } else {
-                    $result->$propertyName = $value;
+                if (!isset($metadata['properties'][$propertyName]['type'])) {
+                    throw new Exception('Type of persistent object property not set.');
                 }
+				$result->$propertyName = $this->castDatabaseValue($value, $metadata['properties'][$propertyName]['type']);
             }
         }
         return $result;
@@ -173,5 +172,65 @@ abstract class avorium_core_persistence_AbstractPersistenceAdapter {
      * to create or update a table for.
      */
     public abstract function updateOrCreateTable($persistentobjectclass);
+	
+	/**
+	 * Executes the query which should be a multiple results query and creates
+	 * a datatable from the result. When the query is invalid or the query does
+	 * not return a result with at least one row, an exception is thrown.
+	 * When the query returns multiple columns with the same name, the datatable
+	 * will only contain one column with that name (the last occurence).
+	 * The order of rows and columns in the datatable is exactly the same as
+	 * the order of the query result.
+	 * The header names of the datatable are set to the column namens the query
+	 * returns.
+	 * The values are all strings, independent on the database datatypes.
+	 * 
+	 * @param string $query Multiple result query to execute.
+	 * @return avorium_core_data_DataTable Datatable with at least one row and 
+	 * column containing the results from the query.
+	 */
+	public function getDataTable($query) {
+		// Check query parameter
+		if (is_null($query)) {
+			throw new Exception('The query must not be null.');
+		}
+		$records = $this->executeMultipleResultQuery($query);
+		$rowcount = count($records);
+		// Extract headers
+		$headernames = array_keys(get_object_vars($records[0]));
+		$columncount = count($headernames);
+		$datatable = new avorium_core_data_DataTable($rowcount, $columncount);
+		for ($i = 0; $i < $columncount; $i++) {
+			$datatable->setHeader($i, $headernames[$i]);
+		}
+		for ($i = 0; $i < $rowcount; $i++) {
+			$row = get_object_vars($records[$i]);
+			for ($j = 0; $j < $columncount; $j++) {
+				$datatable->setCellValue($i, $j, $row[$headernames[$j]]);
+			}
+		}
+		return $datatable;
+	}
+	
+	/**
+	 * Derived classes have to analyze the datatable, validate its content and
+	 * store it into the database in the way "all or nothing". That means, if
+	 * there is a problem with a single value of the datatable, no data has to
+	 * be stored to the database. So the adapter should use bulk queries and 
+	 * should not put the values row by row into the database.
+	 * Rows which have no primary key in the database (new ones) should be
+	 * inserted as new rows and rows for which a dataset with a primary key
+	 * already exists should update this dataset, but only the columns defined
+	 * in the datatable.
+	 * When the datatable contains no primary key column, the datatable cannot
+	 * be stored in the database because there is no mechanism for automatically
+	 * creating primary keys (not all tables have an auto increment column).
+	 * 
+	 * @param string $tablename Name of the database table where to store the
+	 * values into.
+	 * @param avorium_core_data_DataTable $datatable Datatable to store into the
+	 * database.
+	 */
+	public abstract function saveDataTable($tablename, $datatable);
 	
 }

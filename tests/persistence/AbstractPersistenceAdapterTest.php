@@ -31,6 +31,8 @@ require_once dirname(__FILE__).'/AbstractPersistenceAdapterTestPersistentObjectW
 require_once dirname(__FILE__).'/AbstractPersistenceAdapterTestNoPersistentObject.php';
 require_once dirname(__FILE__).'/AbstractPersistenceAdapterTestPersistentObjectDifferentType.php';
 require_once dirname(__FILE__).'/AbstractPersistenceAdapterTestPersistentObjectUnknownType.php';
+require_once dirname(__FILE__).'/AbstractPersistenceAdapterTestPersistentObjectNoType.php';
+require_once dirname(__FILE__).'/../../code/avorium/core/data/DataTable.php';
 
 /**
  * Tests the functionality of the persistence adapters. The tests are run
@@ -137,9 +139,9 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
      */
     public function testReadMultipleRecords() {
         $records = [
-            ['UUID' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
-            ['UUID' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
-            ['UUID' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
         ];
         // Write data to the database
         foreach ($records as $record) {
@@ -182,7 +184,7 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
     
     /**
      * Tests the correct behaviour of the get() function with persistent objects 
-     * with incomplete annotations.
+     * with missing table name annotation.
      */
     public function testGetMissingMetadata() {
         $uuid = 'abcdefg';
@@ -192,27 +194,27 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
         // Write data to the database
         $this->executeQuery('insert into POTEST (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
         // Read data out and cast it to persistent object with incomplete metadata
-        $this->setExpectedException('Exception', 'Could not determine table name from persistent object annotations.');
+        $this->setExpectedException('Exception', 'The table name of the persistent object could not be determined.');
         // Here should come up an exception. It should not be possible to match to an class without knowing from which table to extract the date
         $this->getPersistenceAdapter()->get('test_persistence_AbstractPersistenceAdapterTestPersistentObjectWithoutMetadata', $uuid);
     }
     
     /**
      * Tests the correct behaviour of the getAll() function with persistent objects 
-     * with incomplete annotations.
+     * with missing table name annotation.
      */
     public function testGetAllMissingMetadata() {
         $records = [
-            ['UUID' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
-            ['UUID' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
-            ['UUID' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
         ];
         // Write data to the database
         foreach ($records as $record) {
             $this->executeQuery('insert into POTEST (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['UUID'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
         }
         // Read data out and cast it to persistent object with incomplete metadata
-        $this->setExpectedException('Exception', 'Could not determine table name from persistent object annotations.');
+        $this->setExpectedException('Exception', 'The table name of the persistent object could not be determined.');
         // Here should come up an exception. It should not be possible to match to an class without knowing from which table to extract the date
         $this->getPersistenceAdapter()->getAll('test_persistence_AbstractPersistenceAdapterTestPersistentObjectWithoutMetadata');
     }
@@ -231,7 +233,7 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
         // Read data out and cast it to persistent object with incomplete metadata
         // Here should come up an exception. It should not be possible to match to an class without knowing from which table to extract the date
         $query = 'select * from POTEST where UUID = \''.$uuid.'\'';
-        $po = $this->getPersistenceAdapter()->executeSingleResultQuery($query, 'test_persistence_AbstractPersistenceAdapterTestPersistentObjectWithoutMetadata');
+        $po = $this->getPersistenceAdapter()->executeSingleResultQuery($query, 'test_persistence_AbstractPersistenceAdapterTestNoPersistentObject');
         // Should return a result because when casting to an object the missing class metadata is irrelevant
         $this->assertNotNull($po, 'The result is null.');
     }
@@ -242,16 +244,16 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
      */
     public function testMultipleResultMissingMetadata() {
         $records = [
-            ['UUID' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
-            ['UUID' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
-            ['UUID' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
         ];
         // Write data to the database
         foreach ($records as $record) {
             $this->executeQuery('insert into POTEST (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['UUID'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
         }
         $query = 'select * from POTEST where UUID in (\'uuid1tRMR1\',\'uuid1tRMR2\',\'uuid1tRMR3\')';
-        $pos = $this->getPersistenceAdapter()->executeMultipleResultQuery($query, 'test_persistence_AbstractPersistenceAdapterTestPersistentObjectWithoutMetadata');
+        $pos = $this->getPersistenceAdapter()->executeMultipleResultQuery($query, 'test_persistence_AbstractPersistenceAdapterTestNoPersistentObject');
         // Should return results because when casting to an object the missing class metadata is irrelevant
         $this->assertEquals(count($records), count($pos), 'Wrong number of database records found.');
     }
@@ -278,9 +280,9 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
      */
     public function testGetAllNoPersistentObject() {
         $records = [
-            ['UUID' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
-            ['UUID' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
-            ['UUID' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
         ];
         // Write data to the database
         foreach ($records as $record) {
@@ -371,9 +373,9 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
      */
     public function testMultipleResultQuery() {
         $records = [
-            ['UUID' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
-            ['UUID' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
-            ['UUID' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
         ];
         // Write data to the database
         foreach ($records as $record) {
@@ -506,6 +508,37 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
     }
 
     /**
+     * Tests the use of missing property types in annotations when writing. The casting
+	 * cannot handle this, so an exception should be thrown.
+     */
+    public function testCastNoTypeWhenWriting() {
+        // Create record
+        $po = new test_persistence_AbstractPersistenceAdapterTestPersistentObjectNoType();
+        $po->booleanValue = true;
+        $po->intValue = 2147483647;
+        $po->stringValue = 'Hallo Welt!';
+        // Store new record
+        $this->setExpectedException('Exception', 'Type of persistent object property not set.');
+        $this->getPersistenceAdapter()->save($po);
+    }
+
+    /**
+     * Tests the use of missing property types in annotations when reading.
+	 * The casting cannot cast automatically so an exception should be thrown.
+     */
+    public function testCastNoTypeWhenReading() {
+       $uuid = 'abcdefg';
+        $bool = true;
+        $int = 1234567;
+        $string = 'avorium';
+        // Write data to the database
+        $this->executeQuery('insert into POTEST (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$uuid.'\','.($bool ? 1:0).','.$int.', \''.$string.'\')');
+        // Read data out and cast it to persistent object
+        $this->setExpectedException('Exception', 'Type of persistent object property not set.');
+        $this->getPersistenceAdapter()->get('test_persistence_AbstractPersistenceAdapterTestPersistentObjectNoType', $uuid);
+    }
+
+    /**
      * Tests the use of a type in annotations which is not known to the 
      * persistence adapter when writing to database
      */
@@ -634,9 +667,9 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
      */
     public function testSingleResultQueryWithMultipleResultStatement() {
         $records = [
-            ['UUID' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
-            ['UUID' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
-            ['UUID' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
         ];
         // Write data to the database
         foreach ($records as $record) {
@@ -708,9 +741,9 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
      */
     public function testNoResultQueryWithMultipleResultStatement() {
         $records = [
-            ['UUID' => 'uuid1tRMR1', 'bool' => 0, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
-            ['UUID' => 'uuid1tRMR2', 'bool' => 1, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
-            ['UUID' => 'uuid1tRMR3', 'bool' => 0, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
         ];
         // Write data to the database
         foreach ($records as $record) {
@@ -785,6 +818,695 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
         $this->assertFalse(property_exists($po, 'OTHERINT'), 'Dynamic property otherint exists.');
         $this->assertFalse(property_exists($po, 'OTHERSTRING'), 'Dynamic property otherstring exists.');
     }
+	
+	/**
+	 * Tests whether the getDataTable function returns the values requested
+	 * by a query correctly. Positive test.
+	 */
+	public function testGetDataTable() {
+		// Create values via SQL
+        $records = [
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testGetDataTable 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testGetDataTable 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testGetDataTable 3']
+        ];
+        // Write data to the database
+        foreach ($records as $record) {
+            $this->executeQuery('insert into POTEST (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['UUID'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
+        }
+		// Get value data table
+		$datatable = $this->getPersistenceAdapter()->getDataTable('select UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE from POTEST');
+		// Compare contents
+		$headers = $datatable->getHeaders();
+		$this->assertEquals(4, count($headers), 'Wrong header names count');
+		$this->assertEquals('UUID', $headers[0], 'Column 0 has wrong header name');
+		$this->assertEquals('BOOLEAN_VALUE', $headers[1], 'Column 1 has wrong header name');
+		$this->assertEquals('INT_VALUE', $headers[2], 'Column 2 has wrong header name');
+		$this->assertEquals('STRING_VALUE', $headers[3], 'Column 3 has wrong header name');
+		$datamatrix = $datatable->getDataMatrix();
+		$this->assertEquals(3, count($datamatrix), 'Wrong row count');
+		for ($i = 0; $i < 3; $i++) {
+			$this->assertEquals(4, count($datamatrix[$i]), 'Wrong column count in row '.$i);
+			// The cell values are all strings
+			$this->assertEquals(''.$records[$i]['UUID'], $datamatrix[$i][0], 'Cell content does not match in row '.$i.' in column 0');
+			$this->assertEquals(''.($records[$i]['bool']?1:0), $datamatrix[$i][1], 'Cell content does not match in row '.$i.' in column 1');
+			$this->assertEquals(''.$records[$i]['int'], $datamatrix[$i][2], 'Cell content does not match in row '.$i.' in column 2');
+			$this->assertEquals(''.$records[$i]['string'], $datamatrix[$i][3], 'Cell content does not match in row '.$i.' in column 3');
+		}
+	}
+	
+	/**
+	 * Tests the default behaviour of the getDataTable function and checks that
+	 * all elements are strings, even if they are stored as other datatypes
+	 * in the database.
+	 */
+	public function testGetDataTableAllValuesStrings() {
+		// Create values via SQL
+        $records = [
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testGetDataTable 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testGetDataTable 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testGetDataTable 3']
+        ];
+        // Write data to the database
+        foreach ($records as $record) {
+            $this->executeQuery('insert into POTEST (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['UUID'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
+        }
+		// Get value data table
+		$datatable = $this->getPersistenceAdapter()->getDataTable('select UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE from POTEST');
+		// Compare contents
+		$datamatrix = $datatable->getDataMatrix();
+		$this->assertEquals(3, count($datamatrix), 'Wrong row count');
+		for ($i = 0; $i < 3; $i++) {
+			// The cell values must are be strings
+			$this->assertTrue(is_string($datamatrix[$i][0]), 'Cell value in row '.$i.' in column 0 is not a string');
+			$this->assertTrue(is_string($datamatrix[$i][1]), 'Cell value in row '.$i.' in column 1 is not a string');
+			$this->assertTrue(is_string($datamatrix[$i][2]), 'Cell value in row '.$i.' in column 2 is not a string');
+			$this->assertTrue(is_string($datamatrix[$i][3]), 'Cell value in row '.$i.' in column 3 is not a string');
+		}
+	}
+	
+	/**
+	 * Checks that all values of the datatable have the same order as defined in
+	 * the SQL statements. Therefor nearly same statements with different
+	 * column and row orders are used.
+	 */
+	public function testGetDataTableRowAndColumnOrder() {
+		// Create values via SQL
+        $records = [
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testGetDataTable 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testGetDataTable 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testGetDataTable 3']
+        ];
+        // Write data to the database
+        foreach ($records as $record) {
+            $this->executeQuery('insert into POTEST (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['UUID'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
+        }
+		// Get value data table with columns in different order
+		$datatablecolumnsordered = $this->getPersistenceAdapter()->getDataTable('select STRING_VALUE, BOOLEAN_VALUE, UUID, INT_VALUE from POTEST');
+		$headerscolumnsordered = $datatablecolumnsordered->getHeaders();
+		$this->assertEquals(4, count($headerscolumnsordered), 'Wrong header names count');
+		$this->assertEquals('STRING_VALUE', $headerscolumnsordered[0], 'Column 0 has wrong header name');
+		$this->assertEquals('BOOLEAN_VALUE', $headerscolumnsordered[1], 'Column 1 has wrong header name');
+		$this->assertEquals('UUID', $headerscolumnsordered[2], 'Column 2 has wrong header name');
+		$this->assertEquals('INT_VALUE', $headerscolumnsordered[3], 'Column 3 has wrong header name');
+		$datamatrixcolumnsordered = $datatablecolumnsordered->getDataMatrix();
+		$this->assertEquals(3, count($datamatrixcolumnsordered), 'Wrong row count');
+		for ($i = 0; $i < 3; $i++) {
+			$this->assertEquals(4, count($datamatrixcolumnsordered[$i]), 'Wrong column count in row '.$i);
+			// The cell values are all strings
+			$this->assertEquals(''.$records[$i]['string'], $datamatrixcolumnsordered[$i][0], 'Cell content does not match in row '.$i.' in column 0');
+			$this->assertEquals(''.($records[$i]['bool']?1:0), $datamatrixcolumnsordered[$i][1], 'Cell content does not match in row '.$i.' in column 1');
+			$this->assertEquals(''.$records[$i]['UUID'], $datamatrixcolumnsordered[$i][2], 'Cell content does not match in row '.$i.' in column 2');
+			$this->assertEquals(''.$records[$i]['int'], $datamatrixcolumnsordered[$i][3], 'Cell content does not match in row '.$i.' in column 3');
+		}
+		// Get value data table with rows in different order
+		$datatablerowsordered = $this->getPersistenceAdapter()->getDataTable('select UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE from POTEST order by INT_VALUE desc');
+		$headersrowsordered = $datatablerowsordered->getHeaders();
+		$this->assertEquals(4, count($headersrowsordered), 'Wrong header names count');
+		$this->assertEquals('UUID', $headersrowsordered[0], 'Column 0 has wrong header name');
+		$this->assertEquals('BOOLEAN_VALUE', $headersrowsordered[1], 'Column 1 has wrong header name');
+		$this->assertEquals('INT_VALUE', $headersrowsordered[2], 'Column 2 has wrong header name');
+		$this->assertEquals('STRING_VALUE', $headersrowsordered[3], 'Column 3 has wrong header name');
+		$datamatrixrowsordered = $datatablerowsordered->getDataMatrix();
+		$this->assertEquals(3, count($datamatrixrowsordered), 'Wrong row count');
+		// Row 0
+		$this->assertEquals(''.$records[2]['UUID'], $datamatrixrowsordered[0][0], 'Cell content does not match in row 0 in column 0');
+		$this->assertEquals(''.($records[2]['bool']?1:0), $datamatrixrowsordered[0][1], 'Cell content does not match in row 0 in column 1');
+		$this->assertEquals(''.$records[2]['int'], $datamatrixrowsordered[0][2], 'Cell content does not match in row 0 in column 2');
+		$this->assertEquals(''.$records[2]['string'], $datamatrixrowsordered[0][3], 'Cell content does not match in row 0 in column 3');
+		// Row 1
+		$this->assertEquals(''.$records[1]['UUID'], $datamatrixrowsordered[1][0], 'Cell content does not match in row 0 in column 0');
+		$this->assertEquals(''.($records[1]['bool']?1:0), $datamatrixrowsordered[1][1], 'Cell content does not match in row 0 in column 1');
+		$this->assertEquals(''.$records[1]['int'], $datamatrixrowsordered[1][2], 'Cell content does not match in row 0 in column 2');
+		$this->assertEquals(''.$records[1]['string'], $datamatrixrowsordered[1][3], 'Cell content does not match in row 0 in column 3');
+		// Row 2
+		$this->assertEquals(''.$records[0]['UUID'], $datamatrixrowsordered[2][0], 'Cell content does not match in row 0 in column 0');
+		$this->assertEquals(''.($records[0]['bool']?1:0), $datamatrixrowsordered[2][1], 'Cell content does not match in row 0 in column 1');
+		$this->assertEquals(''.$records[0]['int'], $datamatrixrowsordered[2][2], 'Cell content does not match in row 0 in column 2');
+		$this->assertEquals(''.$records[0]['string'], $datamatrixrowsordered[2][3], 'Cell content does not match in row 0 in column 3');
+	}
+	
+	/**
+	 * When giving null as query the getDataTable function should throw an 
+	 * exception.
+	 */
+	public function testGetDataTableQueryNull() {
+        $records = [
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+        ];
+        // Write data to the database
+        foreach ($records as $record) {
+            $this->executeQuery('insert into POTEST (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['UUID'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
+        }
+        $this->setExpectedException('Exception', 'The query must not be null.');
+		$this->getPersistenceAdapter()->getDataTable(null);
+	}
+	
+	
+	/**
+	 * When the query is not a valid SQL statement the getDataTable function 
+	 * should throw an exception.
+	 */
+	public function testGetDataTableInvalidQuery() {
+        $records = [
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+        ];
+        // Write data to the database
+        foreach ($records as $record) {
+            $this->executeQuery('insert into POTEST (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['UUID'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
+        }
+		$query = 'invalid sql query';
+        $this->setExpectedException('Exception', 'Error in query: '.$query);
+		$this->getPersistenceAdapter()->getDataTable($query);
+	}
+	
+	/**
+	 * When the query has no result (e.g. DELETE) the result cannot be converted
+	 * to a datatable and so the function should throw an exception.
+	 */
+	public function testGetDataTableNoResult() {
+        $records = [
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+        ];
+        // Write data to the database
+        foreach ($records as $record) {
+            $this->executeQuery('insert into POTEST (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['UUID'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
+        }
+		$query = 'delete from POTEST';
+        $this->setExpectedException('Exception', 'Multiple result statement seems to be a no result statement.');
+		$this->getPersistenceAdapter()->getDataTable($query);
+	}
+	
+	/**
+	 * Single results should be handled the same way as multiple results. The
+	 * returned datatable should contain only one row.
+	 */
+	public function testGetDataTableSingleResult() {
+		// Create values via SQL
+        $records = [
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testGetDataTable 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testGetDataTable 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testGetDataTable 3']
+        ];
+        // Write data to the database
+        foreach ($records as $record) {
+            $this->executeQuery('insert into POTEST (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['UUID'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
+        }
+		// Get value data table of single row (second record)
+		$datatable = $this->getPersistenceAdapter()->getDataTable('select UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE from POTEST where UUID=\'uuid1tRMR2\'');
+		// Compare contents
+		$headers = $datatable->getHeaders();
+		$this->assertEquals(4, count($headers), 'Wrong header names count');
+		$this->assertEquals('UUID', $headers[0], 'Column 0 has wrong header name');
+		$this->assertEquals('BOOLEAN_VALUE', $headers[1], 'Column 1 has wrong header name');
+		$this->assertEquals('INT_VALUE', $headers[2], 'Column 2 has wrong header name');
+		$this->assertEquals('STRING_VALUE', $headers[3], 'Column 3 has wrong header name');
+		$datamatrix = $datatable->getDataMatrix();
+		// Data matrix must contain only one row
+		$this->assertEquals(1, count($datamatrix), 'Wrong row count');
+		$this->assertEquals(4, count($datamatrix[0]), 'Wrong column count in row 0');
+		// The query requested the second record
+		$this->assertEquals(''.$records[1]['UUID'], $datamatrix[0][0], 'Cell content does not match in column 0');
+		$this->assertEquals(''.($records[1]['bool']?1:0), $datamatrix[0][1], 'Cell content does not match in column 1');
+		$this->assertEquals(''.$records[1]['int'], $datamatrix[0][2], 'Cell content does not match in column 2');
+		$this->assertEquals(''.$records[1]['string'], $datamatrix[0][3], 'Cell content does not match in column 3');
+	}
+
+	/**
+	 * When the query returns multiple columns with the same column name
+	 * the datatable should return only the last requested column.
+	 */
+	public function testGetDataTableDuplicateColumnNames() {
+		// Create values via SQL
+        $records = [
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testGetDataTable 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testGetDataTable 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testGetDataTable 3']
+        ];
+        // Write data to the database
+        foreach ($records as $record) {
+            $this->executeQuery('insert into POTEST (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['UUID'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
+        }
+		// Get value data table with STRING_VALUE named as UUID at the end. The UUID column must contain the content from STRING_VALUE
+		// and STRING_VALUE must exist only once.
+		$datatable = $this->getPersistenceAdapter()->getDataTable('select UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE, STRING_VALUE as UUID from POTEST');
+		// Compare contents
+		$headers = $datatable->getHeaders();
+		$this->assertEquals(4, count($headers), 'Wrong header names count');
+		$this->assertEquals('UUID', $headers[0], 'Column 0 has wrong header name');
+		$this->assertEquals('BOOLEAN_VALUE', $headers[1], 'Column 1 has wrong header name');
+		$this->assertEquals('INT_VALUE', $headers[2], 'Column 2 has wrong header name');
+		$this->assertEquals('STRING_VALUE', $headers[3], 'Column 3 has wrong header name');
+		$datamatrix = $datatable->getDataMatrix();
+		$this->assertEquals(3, count($datamatrix), 'Wrong row count');
+		for ($i = 0; $i < 3; $i++) {
+			$this->assertEquals(4, count($datamatrix[$i]), 'Wrong column count in row '.$i);
+			// The UUID column was overwritten by aliasing the string column in the statement
+			$this->assertEquals(''.$records[$i]['string'], $datamatrix[$i][0], 'Cell content does not match in row '.$i.' in column 0');
+			$this->assertEquals(''.($records[$i]['bool']?1:0), $datamatrix[$i][1], 'Cell content does not match in row '.$i.' in column 1');
+			$this->assertEquals(''.$records[$i]['int'], $datamatrix[$i][2], 'Cell content does not match in row '.$i.' in column 2');
+			$this->assertEquals(''.$records[$i]['string'], $datamatrix[$i][3], 'Cell content does not match in row '.$i.' in column 3');
+		}
+	}
+	
+	/**
+	 * Positive test for normal use of saveDataTable. The given values should
+	 * be stored correctly depending on their datatypes. Currently only boolean,
+	 * integer and string are supported.
+	 */
+	public function testSaveDataTable() {
+        $records = [
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testGetDataTable 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testGetDataTable 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testGetDataTable 3']
+        ];
+		// Create datatable and store it into the database
+		$datatable = new avorium_core_data_DataTable(3, 4);
+		$datatable->setHeader(0, 'UUID');
+		$datatable->setHeader(1, 'BOOLEAN_VALUE');
+		$datatable->setHeader(2, 'INT_VALUE');
+		$datatable->setHeader(3, 'STRING_VALUE');
+		for ($i = 0; $i < 3; $i++) {
+			$datatable->setCellValue($i, 0, $records[$i]['UUID']);
+			$datatable->setCellValue($i, 1, $records[$i]['bool']);
+			$datatable->setCellValue($i, 2, $records[$i]['int']);
+			$datatable->setCellValue($i, 3, $records[$i]['string']);
+		}
+		$this->getPersistenceAdapter()->saveDataTable('POTEST', $datatable);
+		// Read the records via SQL and check their contents.
+		// Let them return the results ordered. Mybe the persistence adapter 
+		// uses bulk save methods which store the records in a different order
+		$result = $this->executeQuery('select UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE from POTEST order by UUID');
+		$this->assertEquals(3, count($result), 'Wrong row count');
+		for ($i = 0; $i < 3; $i++) {
+			$this->assertEquals($records[$i]['UUID'], $result[$i]['UUID'], 'UUID from database is not as expected.');
+			$this->assertEquals($records[$i]['bool']?1:0, $result[$i]['BOOLEAN_VALUE'], 'Boolean value from database is not as expected.');
+			$this->assertEquals($records[$i]['int'], $result[$i]['INT_VALUE'], 'Boolean value from database is not as expected.');
+			$this->assertEquals($records[$i]['string'], $result[$i]['STRING_VALUE'], 'Boolean value from database is not as expected.');
+		}
+	}
+	
+	/**
+	 * When no table name is given as parameter, the saveDataTable function
+	 * should throw an exception.
+	 */
+	public function testSaveDataTableNoTableName() {
+        $records = [
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testGetDataTable 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testGetDataTable 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testGetDataTable 3']
+        ];
+		$datatable = new avorium_core_data_DataTable(3, 4);
+		$datatable->setHeader(0, 'UUID');
+		$datatable->setHeader(1, 'BOOLEAN_VALUE');
+		$datatable->setHeader(2, 'INT_VALUE');
+		$datatable->setHeader(3, 'STRING_VALUE');
+		for ($i = 0; $i < 3; $i++) {
+			$datatable->setCellValue($i, 0, $records[$i]['UUID']);
+			$datatable->setCellValue($i, 1, $records[$i]['bool']);
+			$datatable->setCellValue($i, 2, $records[$i]['int']);
+			$datatable->setCellValue($i, 3, $records[$i]['string']);
+		}
+		// Save without giving a table name
+        $this->setExpectedException('Exception', 'No table name given.');
+		$this->getPersistenceAdapter()->saveDataTable(null, $datatable);
+	}
+	
+	/**
+	 * When the table name is not given as string parameter, the saveDataTable
+	 * function should throw an exception.
+	 */
+	public function testSaveDataTableTableNameNotString() {
+        $records = [
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testGetDataTable 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testGetDataTable 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testGetDataTable 3']
+        ];
+		$datatable = new avorium_core_data_DataTable(3, 4);
+		$datatable->setHeader(0, 'UUID');
+		$datatable->setHeader(1, 'BOOLEAN_VALUE');
+		$datatable->setHeader(2, 'INT_VALUE');
+		$datatable->setHeader(3, 'STRING_VALUE');
+		for ($i = 0; $i < 3; $i++) {
+			$datatable->setCellValue($i, 0, $records[$i]['UUID']);
+			$datatable->setCellValue($i, 1, $records[$i]['bool']);
+			$datatable->setCellValue($i, 2, $records[$i]['int']);
+			$datatable->setCellValue($i, 3, $records[$i]['string']);
+		}
+		// Save without giving a table name which is not a string
+        $this->setExpectedException('Exception', 'Table name must be a string.');
+		$this->getPersistenceAdapter()->saveDataTable(3, $datatable);
+	}
+	
+	/**
+	 * When an unknown table name is given as parameter, the saveDataTable 
+	 * function should throw an exception.
+	 */
+	public function testSaveDataTableInvalidTableName() {
+        $records = [
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testGetDataTable 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testGetDataTable 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testGetDataTable 3']
+        ];
+		$datatable = new avorium_core_data_DataTable(3, 4);
+		$datatable->setHeader(0, 'UUID');
+		$datatable->setHeader(1, 'BOOLEAN_VALUE');
+		$datatable->setHeader(2, 'INT_VALUE');
+		$datatable->setHeader(3, 'STRING_VALUE');
+		for ($i = 0; $i < 3; $i++) {
+			$datatable->setCellValue($i, 0, $records[$i]['UUID']);
+			$datatable->setCellValue($i, 1, $records[$i]['bool']);
+			$datatable->setCellValue($i, 2, $records[$i]['int']);
+			$datatable->setCellValue($i, 3, $records[$i]['string']);
+		}
+		// Save giving an invalid table name
+        $this->setExpectedException('Exception', 'Invalid table name given: INVALIDTABLENAME');
+		$this->getPersistenceAdapter()->saveDataTable('INVALIDTABLENAME', $datatable, true);
+	}
+	
+	/**
+	 * When no data table is given as parameter, the saveDataTable function
+	 * should throw an exception.
+	 */
+	public function testSaveDataTableNoDataTable() {
+        $this->setExpectedException('Exception', 'No data table given.');
+		$this->getPersistenceAdapter()->saveDataTable('POTEST', null);
+	}
+	
+	/**
+	 * When the datatable parameter is not of type avorium_core_data_DataTable,
+	 * the function should throw an exception
+	 */
+	public function testSaveDataTableIncorrectDataType() {
+        $this->setExpectedException('Exception', 'Data table is not of correct datatype.');
+		$this->getPersistenceAdapter()->saveDataTable('POTEST', 'Incorrect data type');
+	}
+	
+	/**
+	 * When the header names of the data table do not match to the colmn names
+	 * of the database table, the function should throw an exception.
+	 */
+	public function testSaveDataTableColumnNamesNotMatching() {
+        $records = [
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testGetDataTable 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testGetDataTable 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testGetDataTable 3']
+        ];
+		$datatable = new avorium_core_data_DataTable(3, 4);
+		$datatable->setHeader(0, 'UUID');
+		$datatable->setHeader(1, 'INVALID_COLUMN_NAME');
+		$datatable->setHeader(2, 'INT_VALUE');
+		$datatable->setHeader(3, 'STRING_VALUE');
+		for ($i = 0; $i < 3; $i++) {
+			$datatable->setCellValue($i, 0, $records[$i]['UUID']);
+			$datatable->setCellValue($i, 1, $records[$i]['bool']);
+			$datatable->setCellValue($i, 2, $records[$i]['int']);
+			$datatable->setCellValue($i, 3, $records[$i]['string']);
+		}
+		// Save giving an invalid column name
+        $this->setExpectedException('Exception');
+		$this->getPersistenceAdapter()->saveDataTable('POTEST', $datatable);
+	}
+	
+	/**
+	 * Currently only boolean, integer and string are supported as PHP value
+	 * types for the saveDataTable function. So this function should throw
+	 * an exception when in one of the cells is datatype which the
+	 * persistence adapter cannot handle (e.g. objects or arrays)
+	 */
+	public function testSaveDataTableUnknownValueDatatype() {
+        $records = [
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testGetDataTable 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => array(), 'string' => 'testGetDataTable 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testGetDataTable 3']
+        ];
+		$datatable = new avorium_core_data_DataTable(3, 4);
+		$datatable->setHeader(0, 'UUID');
+		$datatable->setHeader(1, 'BOOLEAN_VALUE');
+		$datatable->setHeader(2, 'INT_VALUE');
+		$datatable->setHeader(3, 'STRING_VALUE');
+		for ($i = 0; $i < 3; $i++) {
+			$datatable->setCellValue($i, 0, $records[$i]['UUID']);
+			$datatable->setCellValue($i, 1, $records[$i]['bool']);
+			$datatable->setCellValue($i, 2, $records[$i]['int']);
+			$datatable->setCellValue($i, 3, $records[$i]['string']);
+		}
+		// Save giving an unknown data type (array). The persistence adapter
+		// checks this before it constructs the SQL query because it must
+		// know whether to escape the value in the stamenent or not.
+        $this->setExpectedException('Exception', 'Unknown datatype: array');
+		$this->getPersistenceAdapter()->saveDataTable('POTEST', $datatable);
+	}
+
+	/**
+	 * Tests the behaviour of the saveDataTable function when null values are 
+	 * given.
+	 */
+	public function testSaveDataTableNullValues() {
+       $recordswithnullvalues = [
+            ['UUID' => 'uuid1tRMR1', 'bool' => true, 'int' => 100, 'string' => 'testGetDataTable 10'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => null, 'int' => null, 'string' => null],
+            ['UUID' => 'uuid1tRMR3', 'bool' => true, 'int' => 300, 'string' => 'testGetDataTable 30']
+        ];
+		$datatablewithnullvalues = new avorium_core_data_DataTable(3, 4);
+		$datatablewithnullvalues->setHeader(0, 'UUID');
+		$datatablewithnullvalues->setHeader(1, 'BOOLEAN_VALUE');
+		$datatablewithnullvalues->setHeader(2, 'INT_VALUE');
+		$datatablewithnullvalues->setHeader(3, 'STRING_VALUE');
+		for ($i = 0; $i < 3; $i++) {
+			$datatablewithnullvalues->setCellValue($i, 0, $recordswithnullvalues[$i]['UUID']);
+			$datatablewithnullvalues->setCellValue($i, 1, $recordswithnullvalues[$i]['bool']);
+			$datatablewithnullvalues->setCellValue($i, 2, $recordswithnullvalues[$i]['int']);
+			$datatablewithnullvalues->setCellValue($i, 3, $recordswithnullvalues[$i]['string']);
+		}
+		// Store the null values
+		$this->getPersistenceAdapter()->saveDataTable('POTEST', $datatablewithnullvalues);
+		// Read the database records, the values now must contain the null values
+		$resultwithnullvalues = $this->executeQuery('select UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE from POTEST order by UUID');
+		$this->assertEquals(3, count($resultwithnullvalues), 'Wrong row count');
+		for ($i = 0; $i < 3; $i++) {
+			$this->assertEquals($recordswithnullvalues[$i]['UUID'], $resultwithnullvalues[$i]['UUID'], 'UUID from database is not as expected in row '.$i.'.');
+			$this->assertEquals($recordswithnullvalues[$i]['bool'], $resultwithnullvalues[$i]['BOOLEAN_VALUE'], 'Boolean value from database is not as expected in row '.$i.'.');
+			$this->assertEquals($recordswithnullvalues[$i]['int'], $resultwithnullvalues[$i]['INT_VALUE'], 'Integer value from database is not as expected in row '.$i.'.');
+			$this->assertEquals($recordswithnullvalues[$i]['string'], $resultwithnullvalues[$i]['STRING_VALUE'], 'String value from database is not as expected in row '.$i.'.');
+		}
+	}
+
+	/**
+	 * Tests the insertion of rows with new primary keys into an existing table.
+	 * These rows should be inserted as new rows independent on the
+	 * ignorenullvalues parameter (null value columns are left out in every
+	 * case). The size of the database table should increase after the
+	 * insertion.
+	 */
+	public function testSaveDataTableInsertNewRows() {
+		// Prepare some database contents via SQL
+        $records = [
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+        ];
+		$nonullvaluerecord = ['UUID' => 'uuid2nvr1', 'bool' => false, 'int' => 30, 'string' => 'testReadMultipleRecords 3'];
+		$nullvaluerecord = ['UUID' => 'uuid2nvr2', 'bool' => null, 'int' => null, 'string' => null];
+        foreach ($records as $record) {
+            $this->executeQuery('insert into POTEST (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['UUID'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
+        }
+		// Prepare datatable
+		$datatable = new avorium_core_data_DataTable(1, 4);
+		$datatable->setHeader(0, 'UUID');
+		$datatable->setHeader(1, 'BOOLEAN_VALUE');
+		$datatable->setHeader(2, 'INT_VALUE');
+		$datatable->setHeader(3, 'STRING_VALUE');
+		// Store a new record without any null values
+		$datatable->setCellValue(0, 0, $nonullvaluerecord['UUID']);
+		$datatable->setCellValue(0, 1, $nonullvaluerecord['bool']);
+		$datatable->setCellValue(0, 2, $nonullvaluerecord['int']);
+		$datatable->setCellValue(0, 3, $nonullvaluerecord['string']);
+		$this->getPersistenceAdapter()->saveDataTable('POTEST', $datatable);
+		// Check for the new record
+		$resultwithoutnullvalues = $this->executeQuery('select UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE from POTEST order by UUID');
+		$this->assertEquals(4, count($resultwithoutnullvalues), 'Wrong row count');
+		$this->assertEquals($nonullvaluerecord['UUID'], $resultwithoutnullvalues[3]['UUID'], 'UUID from database is not as expected.');
+		$this->assertEquals($nonullvaluerecord['bool']?1:0, $resultwithoutnullvalues[3]['BOOLEAN_VALUE'], 'Boolean value from database is not as expected.');
+		$this->assertEquals($nonullvaluerecord['int'], $resultwithoutnullvalues[3]['INT_VALUE'], 'Integer value from database is not as expected.');
+		$this->assertEquals($nonullvaluerecord['string'], $resultwithoutnullvalues[3]['STRING_VALUE'], 'String value from database is not as expected.');
+		// Store a new record with null values
+		$datatable->setCellValue(0, 0, $nullvaluerecord['UUID']);
+		$datatable->setCellValue(0, 1, $nullvaluerecord['bool']);
+		$datatable->setCellValue(0, 2, $nullvaluerecord['int']);
+		$datatable->setCellValue(0, 3, $nullvaluerecord['string']);
+		$this->getPersistenceAdapter()->saveDataTable('POTEST', $datatable);
+		// Check for the new record, must contain null values, because when inserting the parameter is irrelevant
+		$resultwithnullvaluesignoring = $this->executeQuery('select UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE from POTEST order by UUID');
+		$this->assertEquals(5, count($resultwithnullvaluesignoring), 'Wrong row count');
+		$this->assertEquals($nullvaluerecord['UUID'], $resultwithnullvaluesignoring[4]['UUID'], 'UUID from database is not as expected.');
+		$this->assertEquals($nullvaluerecord['bool']?1:0, $resultwithnullvaluesignoring[4]['BOOLEAN_VALUE'], 'Boolean value from database is not as expected.');
+		$this->assertEquals($nullvaluerecord['int'], $resultwithnullvaluesignoring[4]['INT_VALUE'], 'Integer value from database is not as expected.');
+		$this->assertEquals($nullvaluerecord['string'], $resultwithnullvaluesignoring[4]['STRING_VALUE'], 'String value from database is not as expected.');
+	}
+
+	/**
+	 * When givin a datatable which has rows and the primary keys of the rows
+	 * already exist in the database, these database records should be
+	 * overwritten. But only these columns are overwritten, which are contained
+	 * in the datatable. All other columns of the record should keep the old
+	 * values.
+	 */
+	public function testSaveDataTableUpdateRows() {
+		// Prepare the database table via SQL
+        $records = [
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+        ];
+        foreach ($records as $record) {
+            $this->executeQuery('insert into POTEST (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['UUID'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
+        }
+		// Create a datatable where only one column should be updated
+		$datatable = new avorium_core_data_DataTable(3, 2);
+		$datatable->setHeader(0, 'UUID');
+		$datatable->setHeader(1, 'STRING_VALUE');
+		// Store a new record without any null values
+		for ($i = 0; $i < 3; $i++) {
+			$datatable->setCellValue($i, 0, $records[$i]['UUID']);
+			$datatable->setCellValue($i, 1, 'New value '.$i);
+		}
+		$this->getPersistenceAdapter()->saveDataTable('POTEST', $datatable);
+		// Read out the database, all other columns must have the old values
+		$result = $this->executeQuery('select UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE from POTEST order by UUID');
+		$this->assertEquals(3, count($result), 'Wrong row count');
+		for ($i = 0; $i < 3; $i++) {
+			$this->assertEquals($records[$i]['UUID'], $result[$i]['UUID'], 'UUID from database is not as expected in row '.$i.'.');
+			$this->assertEquals($records[$i]['bool']?1:0, $result[$i]['BOOLEAN_VALUE'], 'Boolean value from database is not as expected in row '.$i.'.');
+			$this->assertEquals($records[$i]['int'], $result[$i]['INT_VALUE'], 'Integer value from database is not as expected in row '.$i.'.');
+			$this->assertEquals('New value '.$i, $result[$i]['STRING_VALUE'], 'String value from database is not as expected in row '.$i.'.');
+		}
+	}
+
+	/**
+	 * When the datatable contains no column which matches to the primary key
+	 * column of the database, the saveDataTable function should throw an
+	 * exception and it should not try to create new records with an
+	 * automatically created primary key (even not when there is an auto
+	 * increment column).
+	 */
+	public function testSaveDataTableNoPrimaryKeyColumn() {
+        $records = [
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testGetDataTable 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testGetDataTable 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testGetDataTable 3']
+        ];
+		// Create datatable and store it into the database
+		$datatable = new avorium_core_data_DataTable(3, 3);
+		$datatable->setHeader(0, 'BOOLEAN_VALUE');
+		$datatable->setHeader(1, 'INT_VALUE');
+		$datatable->setHeader(2, 'STRING_VALUE');
+		for ($i = 0; $i < 3; $i++) {
+			$datatable->setCellValue($i, 0, $records[$i]['bool']);
+			$datatable->setCellValue($i, 1, $records[$i]['int']);
+			$datatable->setCellValue($i, 2, $records[$i]['string']);
+		}
+        $this->setExpectedException('Exception', 'Expected primary key column UUID not found.');
+		$this->getPersistenceAdapter()->saveDataTable('POTEST', $datatable);
+	}
+	
+	/**
+	 * Tests the behaviour of saving a datatable when the given table name
+	 * contains special characters. It is expected that an exception is thrown
+	 * that the table cannot be found because the databases do not support
+	 * special characters in table names. But the statement must be escaped
+	 * correctly to prevent SQL injections.
+	 */
+	public function testSaveDataTableSpecialCharsInTableName() {
+        $records = [
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testGetDataTable 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testGetDataTable 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testGetDataTable 3']
+        ];
+		// Create datatable and store it into the database
+		$datatable = new avorium_core_data_DataTable(3, 4);
+		$datatable->setHeader(0, 'UUID');
+		$datatable->setHeader(1, 'BOOLEAN_VALUE');
+		$datatable->setHeader(2, 'INT_VALUE');
+		$datatable->setHeader(3, 'STRING_VALUE');
+		for ($i = 0; $i < 3; $i++) {
+			$datatable->setCellValue($i, 0, $records[$i]['UUID']);
+			$datatable->setCellValue($i, 1, $records[$i]['bool']);
+			$datatable->setCellValue($i, 2, $records[$i]['int']);
+			$datatable->setCellValue($i, 3, $records[$i]['string']);
+		}
+        $this->setExpectedException('Exception', 'Invalid table name given: °!"§$%&/()=?`*\'>; :_+öä#<,.-²³¼¹½¬{[]}\\¸~’–…·|@\t\r\n');
+		$this->getPersistenceAdapter()->saveDataTable('°!"§$%&/()=?`*\'>; :_+öä#<,.-²³¼¹½¬{[]}\\¸~’–…·|@\t\r\n', $datatable);
+	}
+	
+	/**
+	 * When special characters are given as column names, they should be
+	 * escaped correctly to prevent SQL injections. But the function
+	 * should throw an exception that says that the column cannot be found.
+	 */
+	public function testSaveDataTableSpecialCharsInColumnName() {
+        $records = [
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testGetDataTable 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testGetDataTable 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testGetDataTable 3']
+        ];
+		// Create datatable and store it into the database
+		$datatable = new avorium_core_data_DataTable(3, 4);
+		$datatable->setHeader(0, 'UUID');
+		$datatable->setHeader(1, '°!"§$%&/()=?`*\'>; :_+öä#<,.-²³¼¹½¬{[]}\\¸~’–…·|@\t\r\n');
+		$datatable->setHeader(2, 'INT_VALUE');
+		$datatable->setHeader(3, 'STRING_VALUE');
+		for ($i = 0; $i < 3; $i++) {
+			$datatable->setCellValue($i, 0, $records[$i]['UUID']);
+			$datatable->setCellValue($i, 1, $records[$i]['bool']);
+			$datatable->setCellValue($i, 2, $records[$i]['int']);
+			$datatable->setCellValue($i, 3, $records[$i]['string']);
+		}
+		// The database query itself throws an exception
+        $this->setExpectedException('Exception');
+		$this->getPersistenceAdapter()->saveDataTable('POTEST', $datatable);
+	}
+	
+	/**
+	 * Values with special characters should be escaped and stored correctly.
+	 */
+	public function testSaveDataTableSpecialCharsInValues() {
+        $records = [
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testGetDataTable 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => '°!"§$%&/()=?`*\'>; :_+öä#<,.-²³¼¹½¬{[]}\\¸~’–…·|@\t\r\n'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testGetDataTable 3']
+        ];
+		// Create datatable and store it into the database
+		$datatable = new avorium_core_data_DataTable(3, 4);
+		$datatable->setHeader(0, 'UUID');
+		$datatable->setHeader(1, 'BOOLEAN_VALUE');
+		$datatable->setHeader(2, 'INT_VALUE');
+		$datatable->setHeader(3, 'STRING_VALUE');
+		for ($i = 0; $i < 3; $i++) {
+			$datatable->setCellValue($i, 0, $records[$i]['UUID']);
+			$datatable->setCellValue($i, 1, $records[$i]['bool']);
+			$datatable->setCellValue($i, 2, $records[$i]['int']);
+			$datatable->setCellValue($i, 3, $records[$i]['string']);
+		}
+		$this->getPersistenceAdapter()->saveDataTable('POTEST', $datatable);
+		// Read the records via SQL and check their contents.
+		// Let them return the results ordered. Mybe the persistence adapter 
+		// uses bulk save methods which store the records in a different order
+		$result = $this->executeQuery('select UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE from POTEST order by UUID');
+		$this->assertEquals(3, count($result), 'Wrong row count');
+		for ($i = 0; $i < 3; $i++) {
+			$this->assertEquals($records[$i]['UUID'], $result[$i]['UUID'], 'UUID from database is not as expected.');
+			$this->assertEquals($records[$i]['bool']?1:0, $result[$i]['BOOLEAN_VALUE'], 'Boolean value from database is not as expected.');
+			$this->assertEquals($records[$i]['int'], $result[$i]['INT_VALUE'], 'Boolean value from database is not as expected.');
+			$this->assertEquals($records[$i]['string'], $result[$i]['STRING_VALUE'], 'Boolean value from database is not as expected.');
+		}
+	}
 
     // helper functions
 

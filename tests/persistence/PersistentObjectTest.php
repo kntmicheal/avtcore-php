@@ -26,6 +26,7 @@
 
 require_once dirname(__FILE__).'/../../code/avorium/core/persistence/PersistentObject.php';
 require_once dirname(__FILE__).'/PersistentObjectTestPersistentObject.php';
+require_once dirname(__FILE__).'/PersistentObjectTestPersistentObjectNoTableName.php';
 
 /**
  * Tests the functionality of the PersistentObject class, especially the
@@ -46,5 +47,15 @@ class test_persistence_PersistentObjectTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals(1234567890, $ponormal->intValue, 'Uuid of persistent object is not as expected.');
         $this->assertEquals('Hello world!', $ponormal->stringValue, 'Uuid of persistent object is not as expected.');
     }
+
+		
+	/**
+	 * Tries to save a persistent object without a table name annotation.
+	 * This should not be possible and should throw an exception.
+	 */
+	public function testNoTableNameAnnotation() {
+        $this->setExpectedException('Exception', 'The table name of the persistent object could not be determined.');
+		new test_persistence_PersistentObjectTestPersistentObjectNoTableName();
+	}
 
 }

@@ -80,7 +80,7 @@ class avorium_core_persistence_OraclePersistenceAdapter extends avorium_core_per
 	}
 
 	public function delete(\avorium_core_persistence_PersistentObject $persistentObject) {
-        $this->executeNoResultQuery('delete from '.$this->escape($persistentObject->tablename).' where uuid=\''.$this->escape($persistentObject->uuid).'\'');
+        $this->executeNoResultQuery('delete from '.$this->escapeTableOrColumnName($persistentObject->tablename).' where uuid=\''.$this->escape($persistentObject->uuid).'\'');
 	}
 
 	public function executeMultipleResultQuery($query, $persistentobjectclass = null) {
@@ -144,10 +144,7 @@ class avorium_core_persistence_OraclePersistenceAdapter extends avorium_core_per
         if (!is_subclass_of($persistentobjectclass, 'avorium_core_persistence_PersistentObject')) {
             throw new Exception('The given class is not derived from avorium_core_persistence_PersistentObject. But this is needed to extract the table name!');
         }
-        $tablename = $this->escape((new $persistentobjectclass())->tablename);
-        if (strlen($tablename) < 1) {
-            throw new Exception('Could not determine table name from persistent object annotations.');
-        }
+        $tablename = $this->escapeTableOrColumnName((new $persistentobjectclass())->tablename); // table name is set here because it was tested in persistent object constructor
         return $this->executeSingleResultQuery('select * from '.$tablename.' where uuid=\''.$this->escape($uuid).'\'', $persistentobjectclass);
 	}
 
@@ -155,26 +152,26 @@ class avorium_core_persistence_OraclePersistenceAdapter extends avorium_core_per
         if (!is_subclass_of($persistentobjectclass, 'avorium_core_persistence_PersistentObject')) {
             throw new Exception('The given class is not derived from avorium_core_persistence_PersistentObject. But this is needed to extract the table name!');
         }
-        $tablename = $this->escape((new $persistentobjectclass())->tablename);
-        if (strlen($tablename) < 1) {
-            throw new Exception('Could not determine table name from persistent object annotations.');
-        }
+        $tablename = $this->escapeTableOrColumnName((new $persistentobjectclass())->tablename); // table name is set here because it was tested in persistent object constructor
         return $this->executeMultipleResultQuery('select * from '.$tablename, $persistentobjectclass);
 	}
 
-	public function save(\avorium_core_persistence_PersistentObject $persistentObject) {
+	public function save(avorium_core_persistence_PersistentObject $persistentObject) {
         $metaData = avorium_core_persistence_helper_Annotation::getPersistableMetaData($persistentObject);
-        $tableName = $this->escape($persistentObject->tablename);
+        $tableName = $this->escapeTableOrColumnName($persistentObject->tablename);
         $selects = array();
         $insertcolumns = array();
 		$insertvalues = array();
         $updates = array();
         foreach ($metaData['properties'] as $key => $definition) {
-            $name = $this->escape($definition['name']);
+            $name = $this->escapeTableOrColumnName($definition['name']);
             if ($persistentObject->$key === null) { // Null-values are transferred to database as they are
 				$selects[] = 'NULL '.$name;
             } else {
                 $value = $persistentObject->$key;
+				if (!isset($definition['type'])) {
+					throw new Exception('Type of persistent object property not set.');
+				}
                 switch($definition['type']) {
                     case 'bool':
                         $selects[] = ($value ? 1 : 0).' '.$name;
@@ -205,7 +202,7 @@ class avorium_core_persistence_OraclePersistenceAdapter extends avorium_core_per
 
 	public function updateOrCreateTable($persistentobjectclass) {
         $metaData = avorium_core_persistence_helper_Annotation::getPersistableMetaData($persistentobjectclass);
-        $tableName = $this->escape(strtoupper($metaData['name']));
+        $tableName = $this->escapeTableOrColumnName(strtoupper($metaData['name']));
         // Erst mal gucken, ob die Tabelle existiert
 		$query = 'SELECT * FROM USER_TABLES WHERE UPPER(TABLE_NAME)=\''.$tableName.'\'';
 		$result = $this->executeMultipleResultQuery($query);
@@ -226,16 +223,16 @@ class avorium_core_persistence_OraclePersistenceAdapter extends avorium_core_per
             if ($definition['name'] !== 'UUID') {
                 $columntype = $this->getDatabaseType($definition['type']);
                 $columnsize = isset($definition['size']) ? '('.$this->escape($definition['size']).')' : '';
-                $columns[] = $this->escape($definition['name']). ' '.$columntype.$columnsize;
+                $columns[] = $this->escapeTableOrColumnName($definition['name']). ' '.$columntype.$columnsize;
             }
         }
         $columns[] = 'PRIMARY KEY (UUID)';
-        $query = 'CREATE TABLE '.$this->escape($tableName).' ('.implode(',', $columns).')';
+        $query = 'CREATE TABLE '.$this->escapeTableOrColumnName($tableName).' ('.implode(',', $columns).')';
         $this->executeNoResultQuery($query);
     }
 
     private function updateTable($propertiesMetaData, $tableName) {
-        $existingcolumns = $this->executeMultipleResultQuery('SELECT * FROM USER_TAB_COLUMNS WHERE TABLE_NAME=\''.$this->escape($tableName).'\'');
+        $existingcolumns = $this->executeMultipleResultQuery('SELECT * FROM USER_TAB_COLUMNS WHERE TABLE_NAME=\''.$this->escapeTableOrColumnName($tableName).'\'');
         $newcolumns = array();
         foreach ($propertiesMetaData as $definition) {
             $columnfound = false;
@@ -253,11 +250,11 @@ class avorium_core_persistence_OraclePersistenceAdapter extends avorium_core_per
                 }
             }
             if (!$columnfound) {
-                $newcolumns[] = $this->escape($definition['name']).' '.$columntype.$columnsize;
+                $newcolumns[] = $this->escapeTableOrColumnName($definition['name']).' '.$columntype.$columnsize;
             }
         }
         if (count($newcolumns) > 0) {
-            $query = 'ALTER TABLE '.$this->escape($tableName).' ADD ('.implode(',', $newcolumns).')';
+            $query = 'ALTER TABLE '.$this->escapeTableOrColumnName($tableName).' ADD ('.implode(',', $newcolumns).')';
 			$this->executeNoResultQuery($query);
         }
     }
@@ -281,6 +278,81 @@ class avorium_core_persistence_OraclePersistenceAdapter extends avorium_core_per
                 throw new Exception('Database column type \''.$type.'\' is not known to the persistence adapter.');
         }
     }
+	
+	/**
+	 * Replaces all spaces, quotes and semicolon in table or column names to 
+	 * prevent SQL injections
+	 */
+	private function escapeTableOrColumnName($tablename) {
+		return str_replace(' ', '', str_replace(';', '', str_replace('\'', '', $tablename)));
+	}
 
+	public function saveDataTable($tablename, $datatable) {
+		// Check parameters for incorrect values
+		if (is_null($tablename)) {
+			throw new Exception('No table name given.');
+		}
+		if (!is_string($tablename)) {
+			throw new Exception('Table name must be a string.');
+		}
+		if (is_null($datatable)) {
+			throw new Exception('No data table given.');
+		}
+		if (!is_a($datatable, 'avorium_core_data_DataTable')) {
+			throw new Exception('Data table is not of correct datatype.');
+		}
+		// Process data table
+		$escapedtablename = $this->escapeTableOrColumnName($tablename);
+		$headernames = $datatable->getHeaders();
+		$escapedheadernames = array();
+		$columncount = count($headernames);
+		$datamatrix = $datatable->getDataMatrix();
+        $selects = array();
+        $insertcolumns = array();
+		$insertvalues = array();
+        $updates = array();
+		// Obtain primary key from database
+		$primarykeys = $this->executeMultipleResultQuery('select user_cons_columns.table_name, user_cons_columns.column_name from user_cons_columns join user_constraints on user_constraints.constraint_name = user_cons_columns.constraint_name where user_constraints.constraint_type=\'P\' and user_cons_columns.table_name=\''.$escapedtablename.'\'');
+		if (count($primarykeys) < 1) {
+			throw new Exception('Invalid table name given: '.$tablename);
+		}
+		// Currently only one primary key is supported, get its column name
+		$primarykeycolumnname = $primarykeys[0]->COLUMN_NAME;
+		$primarykeycolumnfound = false;
+		foreach ($headernames as $headername) {
+			$escapedheadername = $this->escapeTableOrColumnName($headername);
+			$escapedheadernames[] = $escapedheadername;
+			$insertcolumns[] = 'T.'.$escapedheadername;
+			$insertvalues[] = 'S.'.$escapedheadername;
+			if ($escapedheadername !== $primarykeycolumnname) {
+				$updates[] = 'T.'.$escapedheadername.'=S.'.$escapedheadername;
+			} else {
+				$primarykeycolumnfound = true;
+			}
+		}
+		if (!$primarykeycolumnfound) {
+			throw new Exception('Expected primary key column '.$primarykeycolumnname.' not found.');
+		}
+		foreach ($datamatrix as $row) {
+			$rowselects = array();
+			for ($i = 0; $i < $columncount; $i++) {
+				// Distinguish between data types
+				if (is_null($row[$i])) {
+					$rowselects[] = 'NULL '.$escapedheadernames[$i];
+				} else if (is_bool($row[$i])) {
+					$rowselects[] = ($row[$i] ? 1 : 0).' '.$escapedheadernames[$i];
+				} else if (is_numeric($row[$i])) {
+					$rowselects[] = $row[$i].' '.$escapedheadernames[$i];
+				} else if (is_string($row[$i])) {
+					$rowselects[] = '\''.$this->escape($row[$i]).'\' '.$escapedheadernames[$i];
+				} else {
+					throw new Exception('Unknown datatype: '.gettype($row[$i]));
+				}
+			}
+			$selects[] = 'SELECT '.implode(',', $rowselects).' FROM DUAL';
+		}
+		$query = 'MERGE INTO '.$escapedtablename.' T USING ('.implode(' UNION ALL ', $selects).') S ON (T.UUID = S.UUID) WHEN MATCHED THEN UPDATE SET '.implode(',', $updates).' WHEN NOT MATCHED THEN INSERT ('.implode(',', $insertcolumns).') VALUES ('.implode(',', $insertvalues).')';
+        $this->executeNoResultQuery($query);
+	}
 
 }

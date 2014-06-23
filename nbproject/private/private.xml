@@ -3,6 +3,13 @@
     <coverage xmlns="http://www.netbeans.org/ns/code-coverage/1" enabled="true"/>
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
-        <group/>
+        <group>
+            <file>file:/C:/Users/rh/Documents/NetBeansProjects/avtcore-php/code/avorium/core/persistence/PersistentObject.php</file>
+            <file>file:/C:/Users/rh/Documents/NetBeansProjects/avtcore-php/code/avorium/core/persistence/AbstractPersistenceAdapter.php</file>
+            <file>file:/C:/Users/rh/Documents/NetBeansProjects/avtcore-php/tests/persistence/AbstractPersistenceAdapterTest.php</file>
+            <file>file:/C:/Users/rh/Documents/NetBeansProjects/avtcore-php/code/avorium/core/persistence/OraclePersistenceAdapter.php</file>
+            <file>file:/C:/Users/rh/Documents/NetBeansProjects/avtcore-php/tests/persistence/PersistentObjectTest.php</file>
+            <file>file:/C:/Users/rh/Documents/NetBeansProjects/avtcore-php/code/avorium/core/persistence/MySqlPersistenceAdapter.php</file>
+        </group>
     </open-files>
 </project-private>

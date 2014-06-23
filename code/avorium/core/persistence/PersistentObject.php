@@ -39,7 +39,7 @@ abstract class avorium_core_persistence_PersistentObject {
 
     /**
      * @var string Name of the database table. Gets read out of the annotation
-     * and is set in the constructor
+     * and is set in the constructor. Can be null, when no annotation is set.
      */
     public $tablename;
 
@@ -51,6 +51,9 @@ abstract class avorium_core_persistence_PersistentObject {
     public function __construct(array $properties = NULL) {
         $this->uuid = uniqid('', true);
         $metaData = avorium_core_persistence_helper_Annotation::getPersistableMetaData($this);
+		if (!isset($metaData["name"]) || strlen($metaData["name"]) < 1) {
+			throw new Exception('The table name of the persistent object could not be determined.');
+		}
         $this->tablename = $metaData["name"];
         if ($properties === NULL) {
             return;
