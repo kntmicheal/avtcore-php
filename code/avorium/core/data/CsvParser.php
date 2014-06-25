@@ -51,10 +51,6 @@ require_once dirname(__FILE__).'/DataTable.php';
  * and so exceptions can come up.
  */
 class avorium_core_data_CsvParser {
-	
-	private static $delimiter = ',';
-	private static $quotation = '"';
-	private static $newline = "\n";
 
 	/**
 	 * Converts a CSV string into a datatable. The given CSV string is validated
@@ -184,6 +180,52 @@ class avorium_core_data_CsvParser {
 	 * @return string CSV string with the data table content
 	 */
 	public static function convertDataTableToCsv($datatable) {
-		return null;
+		// Check parameters
+		if (is_null($datatable)) {
+			throw new Exception('The datatable parameter must not be null.');
+		}
+		if (!is_a($datatable, 'avorium_core_data_DataTable')) {
+			throw new Exception('The datatable parameter must be of type avorium_core_data_DataTable.');
+		}
+		$headernames = $datatable->getHeaders();
+		$datamatrix = $datatable->getDataMatrix();
+		// Check header names for null
+		foreach ($headernames as $headername) {
+			if (is_null($headername)) {
+				throw new Exception('A header name is null but must not be.');
+			}
+			if (empty($headername)) {
+				throw new Exception('A header name is empty but must not be.');
+			}
+		}
+		// Construct column names line
+		$csv = static::createCsvLine($headernames);
+		// Append rows
+		foreach ($datamatrix as $row) {
+			$csv .= static::createCsvLine($row);
+		}
+		return $csv;
+	}
+	
+	/**
+	 * Creates a CSV string for a line by quoting the given array
+	 * elements and joining them with commas.
+	 * 
+	 * @param array $row Array containing row cells
+	 * @return string CSV string of row without line ending
+	 */
+	private static function createCsvLine($row) {
+		$result = '';
+		foreach ($row as $cell) {
+			// double the double quotes
+			if (is_null($cell)) {
+				$result .= ',';
+			} elseif (!is_string($cell)) {
+				throw new Exception('A cell value in the datatable is not of type string and cannot be converted.');
+			} else {
+				$result .= ',"'.str_replace('"', '""', $cell).'"';
+			}
+		}
+		return substr($result, 1)."\n"; // Remove first comma and append line break
 	}
 }
