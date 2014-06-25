@@ -83,13 +83,23 @@ class test_data_DataTableTest extends PHPUnit_Framework_TestCase {
 	}
 	
 	/**
-	 * Checks the behaviour of the constructor when a row count less than one
+	 * Checks the behaviour of the constructor when a row count less than zero
 	 * is given. In this case the datatable would be useless so an exception
 	 * is expected.
 	 */
-	public function testConstructorRowCountLessThanOne() {
-		$this->setExpectedException('Exception', 'The row count must be greater than zero.');
-		new avorium_core_data_DataTable(0, 5);
+	public function testConstructorRowCountLessThanZero() {
+		$this->setExpectedException('Exception', 'The row count must be greater than or equal to zero.');
+		new avorium_core_data_DataTable(-1, 5);
+	}
+	
+	/**
+	 * Checks the behaviour of the constructor when a row count equal to zero
+	 * is given. This can be the case when the datatable is used in conjunction
+	 * with persistence adapters where queries return an empty resultset.
+	 */
+	public function testConstructorRowCountZero() {
+		$datatable = new avorium_core_data_DataTable(0, 5);
+		$this->assertEquals(0, count($datatable->getDataMatrix()), 'Datatable has unexpected row count.');
 	}
 	
 	/**

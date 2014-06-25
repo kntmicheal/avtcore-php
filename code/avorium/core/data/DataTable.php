@@ -51,7 +51,8 @@ class avorium_core_data_DataTable {
 	 * Creates a new datatable with the given row and column count. After that
 	 * the number of columns and rows are fixed. A datatable must contain at
 	 * least one cell (one row and one column). When one of the parameters
-	 * have wrong values (smaller that 1 or larger than max int), exceptions
+	 * have wrong values (columncount smaller than 1 or larger than max int
+	 * or row count smaller than 0 or larger than max int), exceptions
 	 * are thrown and no datatable is created.
 	 * 
 	 * @param integer $rowCount Number of rows. Must be an integer between 0 and
@@ -64,8 +65,8 @@ class avorium_core_data_DataTable {
 		if (!is_integer($rowCount)) {
 			throw new Exception('The row count must be an integer.');
 		}
-		if ($rowCount < 1) {
-			throw new Exception('The row count must be greater than zero.');
+		if ($rowCount < 0) {
+			throw new Exception('The row count must be greater than or equal to zero.');
 		}
 		if (!is_integer($columnCount)) {
 			throw new Exception('The column count must be an integer.');

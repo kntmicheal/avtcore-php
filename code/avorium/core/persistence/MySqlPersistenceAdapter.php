@@ -285,6 +285,37 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
 		return str_replace(' ', '', str_replace(';', '', str_replace('\'', '', $tablename)));
 	}
 
+	public function getDataTable($query) {
+		// Check query parameter
+		if (is_null($query)) {
+			throw new Exception('The query must not be null.');
+		}		
+		$resultset = $this->getDatabase()->query($query);
+        if ($resultset === true) { // Query did not return any result because it was a no result query
+            throw new Exception('Multiple result statement seems to be a no result statement.');
+        }
+        if (!is_object($resultset)) {
+            throw new Exception('Error in query: '.$query);
+        }
+		// Prepare datatable
+		$columncount = $resultset->field_count;
+		$rowcount = $resultset->num_rows;
+		$datatable = new avorium_core_data_DataTable($rowcount, $columncount);
+		// Extract header names even if the resultset is empty
+		for ($i = 0; $i < $columncount; $i++) {
+			$datatable->setHeader($i, $resultset->fetch_field_direct($i)->name);
+		}
+		// Fill datatable cells
+		$rownum = 0;
+        while ($row = $resultset->fetch_row()) {
+			for ($i = 0; $i < $columncount; $i++) {
+				$datatable->setCellValue($rownum, $i, $row[$i]);
+			}
+			$rownum++;
+        }
+        return $datatable;
+	}
+
 	public function saveDataTable($tablename, $datatable) {
 		// Check parameters for incorrect values
 		if (is_null($tablename)) {
@@ -304,6 +335,10 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
 		$headernames = $datatable->getHeaders();
 		$columncount = count($headernames);
 		$datamatrix = $datatable->getDataMatrix();
+		// Ignore empty datatables
+		if (count($datamatrix) < 1) {
+			return;
+		}
         $inserts = array();
         $values = array();
         $updates = array();
@@ -318,7 +353,13 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
 		$primarykeycolumnname = $primarykeys[0]->Column_name;
 		$primarykeycolumnfound = false;
 		foreach ($headernames as $headername) {
+			if ($headername === null) {
+				throw new Exception('The header name is null but must not be.');
+			}
 			$escapedheadername = $this->escapeTableOrColumnName($headername);
+			if (strlen($escapedheadername) < 1) {
+				throw new Exception('The header name is empty but must not be.');
+			}
 			$inserts[] = $escapedheadername;
 			if ($escapedheadername !== $primarykeycolumnname) {
                 $updates[] = $escapedheadername.'=VALUES('.$escapedheadername.')';
@@ -348,7 +389,13 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
 			$values[] = '('.implode(',', $rowvalues).')';
 		}
         $query = 'INSERT INTO '.$escapedtablename.' ('.implode(',', $inserts).') VALUES '.implode(',', $values).' ON DUPLICATE KEY UPDATE '.implode(',', $updates);
-        $this->executeNoResultQuery($query);
+        $resultset = $this->getDatabase()->query($query);
+        if (!$resultset) { // When false is returned, the query was not successful
+            throw new Exception('Error in query: '.$query);
+        }
+        if (mysqli_warning_count($this->getDatabase()) > 0) {
+			throw new Exception('Error saving to database. Maybe a given string value cannot be parsed into the correct data type');
+		}
 	}
 
 }
