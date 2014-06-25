@@ -287,6 +287,44 @@ class avorium_core_persistence_OraclePersistenceAdapter extends avorium_core_per
 		return str_replace(' ', '', str_replace(';', '', str_replace('\'', '', $tablename)));
 	}
 
+	public function getDataTable($query) {
+		// Check query parameter
+		if (is_null($query)) {
+			throw new Exception('The query must not be null.');
+		}
+		$statement = oci_parse($this->getDatabase(), $query);
+		$type = oci_statement_type($statement);
+		try {
+			oci_execute($statement);
+		}catch (Exception $ex) {
+			throw new Exception('Error in query: '.$query, null, $ex);
+		}
+		if ($type !== 'SELECT') {
+            throw new Exception('Multiple result statement seems to be a no result statement.');
+		}
+		// Extract rows and columns to have the row count
+		$rows = [];
+        while ($row = oci_fetch_row($statement)) {
+			$rows[] = $row;
+        }
+		// Prepare datatable
+		$columncount = oci_num_fields($statement);
+		$rowcount = count($rows);
+		$datatable = new avorium_core_data_DataTable($rowcount, $columncount);
+		// Extract header names even if the resultset is empty
+		for ($i = 0; $i < $columncount; $i++) {
+			$datatable->setHeader($i, oci_field_name($statement, $i + 1));
+		}
+		// Fill datatable cells
+		for ($i = 0; $i < $rowcount; $i++) {
+			for ($j = 0; $j < $columncount; $j++) {
+				$datatable->setCellValue($i, $j, $rows[$i][$j]);
+			}
+        }
+		oci_free_statement($statement);
+        return $datatable;
+	}
+
 	public function saveDataTable($tablename, $datatable) {
 		// Check parameters for incorrect values
 		if (is_null($tablename)) {

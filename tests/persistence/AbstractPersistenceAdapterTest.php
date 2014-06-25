@@ -690,6 +690,24 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
     }
     
     /**
+     * Tests the behaviour of the executeSingleResultQuery() function when
+     * a statement is given, which returns multiple columns with the same name.
+	 * The result object should have only one property with the duplicate name
+	 * containing the last requested content
+     */
+    public function testSingleResultQueryWithDuplicateColumns() {
+        $record = ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testReadMultipleRecords 2'];
+        // Write data to the database
+		$this->executeQuery('insert into POTEST (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['UUID'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
+        $query = 'select UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE, STRING_VALUE as UUID from POTEST where UUID = \'uuid1tRMR2\'';
+        $result = $this->getPersistenceAdapter()->executeSingleResultQuery($query);
+		$this->assertEquals($record['string'], $result->UUID, 'Uuid should contain the string value but it does not.');
+		$this->assertEquals($record['bool'] ? 1 : 0, $result->BOOLEAN_VALUE, 'Boolean value from persistent object differs from the boolean value of the database.');
+		$this->assertEquals($record['int'], $result->INT_VALUE, 'Integer value from persistent object differs from the int value of the database.');
+		$this->assertEquals($record['string'], $result->STRING_VALUE, 'String value from persistent object differs from the string value of the database.');
+    }
+    
+    /**
      * Tests the behaviour of the executeMultipleResultQuery() function when
      * a statement is given, which has only one results. In this case
      * an array with only one element should be returned.
@@ -705,6 +723,33 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
         $query = 'select * from POTEST where UUID = \'abcdefg\'';
         $pos = $this->getPersistenceAdapter()->executeMultipleResultQuery($query);
         $this->assertEquals(1, count($pos), 'Wrong number of database records found.');
+    }
+    
+    /**
+     * Tests the behaviour of the executeMultipleResultQuery() function when
+     * a statement is given, which returns multiple columns with the same name.
+	 * The result object should have only one property with the duplicate name
+	 * containing the last requested content
+     */
+    public function testMultipleResultQueryWithDuplicateColumns() {
+        $records = [
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+        ];
+        // Write data to the database
+        foreach ($records as $record) {
+            $this->executeQuery('insert into POTEST (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['UUID'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
+        }
+        $query = 'select UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE, STRING_VALUE as UUID from POTEST';
+        $result = $this->getPersistenceAdapter()->executeMultipleResultQuery($query);
+        $this->assertEquals(count($records), count($result), 'Wrong number of database records found.');
+        for($i = 0; $i < count($result); $i++)  {
+            $this->assertEquals($records[$i]['string'], $result[$i]->UUID, 'Uuid should contain the string value but it does not.');
+            $this->assertEquals($records[$i]['bool'] ? 1 : 0, $result[$i]->BOOLEAN_VALUE, 'Boolean value from persistent object differs from the boolean value of the database.');
+            $this->assertEquals($records[$i]['int'], $result[$i]->INT_VALUE, 'Integer value from persistent object differs from the int value of the database.');
+            $this->assertEquals($records[$i]['string'], $result[$i]->STRING_VALUE, 'String value from persistent object differs from the string value of the database.');
+        }
     }
     
     /**
@@ -1004,6 +1049,34 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
 	}
 	
 	/**
+	 * When the query has en empty result (no elements with the given filter
+	 * found) the result must be an empty datatable with no rows but with
+	 * header names.
+	 */
+	public function testGetDataTableEmptyResult() {
+        $records = [
+            ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testReadMultipleRecords 1'],
+            ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testReadMultipleRecords 2'],
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testReadMultipleRecords 3']
+        ];
+        // Write data to the database
+        foreach ($records as $record) {
+            $this->executeQuery('insert into POTEST (UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE) values (\''.$record['UUID'].'\','.($record['bool'] ? 1:0).','.$record['int'].', \''.$record['string'].'\')');
+        }
+		$query = 'select UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE from POTEST where UUID=\'unknownuuid\'';
+		$datatable = $this->getPersistenceAdapter()->getDataTable($query);
+		// Check header names
+		$headernames = $datatable->getHeaders();
+		$this->assertEquals(4, count($headernames), 'Datatable has unexpected header names count.');
+		$this->assertEquals('UUID', $headernames[0], 'Header of column 0 is not as expected.');
+		$this->assertEquals('BOOLEAN_VALUE', $headernames[1], 'Header of column 1 is not as expected.');
+		$this->assertEquals('INT_VALUE', $headernames[2], 'Header of column 2 is not as expected.');
+		$this->assertEquals('STRING_VALUE', $headernames[3], 'Header of column 3 is not as expected.');
+		// Check row count
+		$this->assertEquals(0, count($datatable->getDataMatrix()), 'Datatable has unexpected row count.');
+	}
+	
+	/**
 	 * Single results should be handled the same way as multiple results. The
 	 * returned datatable should contain only one row.
 	 */
@@ -1040,7 +1113,8 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
 
 	/**
 	 * When the query returns multiple columns with the same column name
-	 * the datatable should return only the last requested column.
+	 * the datatable should return all requested columns (also the duplicated 
+	 * ones).
 	 */
 	public function testGetDataTableDuplicateColumnNames() {
 		// Create values via SQL
@@ -1058,20 +1132,22 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
 		$datatable = $this->getPersistenceAdapter()->getDataTable('select UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE, STRING_VALUE as UUID from POTEST');
 		// Compare contents
 		$headers = $datatable->getHeaders();
-		$this->assertEquals(4, count($headers), 'Wrong header names count');
+		$this->assertEquals(5, count($headers), 'Wrong header names count');
 		$this->assertEquals('UUID', $headers[0], 'Column 0 has wrong header name');
 		$this->assertEquals('BOOLEAN_VALUE', $headers[1], 'Column 1 has wrong header name');
 		$this->assertEquals('INT_VALUE', $headers[2], 'Column 2 has wrong header name');
 		$this->assertEquals('STRING_VALUE', $headers[3], 'Column 3 has wrong header name');
+		$this->assertEquals('UUID', $headers[4], 'Column 4 has wrong header name');
 		$datamatrix = $datatable->getDataMatrix();
 		$this->assertEquals(3, count($datamatrix), 'Wrong row count');
 		for ($i = 0; $i < 3; $i++) {
-			$this->assertEquals(4, count($datamatrix[$i]), 'Wrong column count in row '.$i);
+			$this->assertEquals(5, count($datamatrix[$i]), 'Wrong column count in row '.$i);
 			// The UUID column was overwritten by aliasing the string column in the statement
-			$this->assertEquals(''.$records[$i]['string'], $datamatrix[$i][0], 'Cell content does not match in row '.$i.' in column 0');
+			$this->assertEquals(''.$records[$i]['UUID'], $datamatrix[$i][0], 'Cell content does not match in row '.$i.' in column 0');
 			$this->assertEquals(''.($records[$i]['bool']?1:0), $datamatrix[$i][1], 'Cell content does not match in row '.$i.' in column 1');
 			$this->assertEquals(''.$records[$i]['int'], $datamatrix[$i][2], 'Cell content does not match in row '.$i.' in column 2');
 			$this->assertEquals(''.$records[$i]['string'], $datamatrix[$i][3], 'Cell content does not match in row '.$i.' in column 3');
+			$this->assertEquals(''.$records[$i]['string'], $datamatrix[$i][4], 'Cell content does not match in row '.$i.' in column 4');
 		}
 	}
 	

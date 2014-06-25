@@ -285,6 +285,37 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
 		return str_replace(' ', '', str_replace(';', '', str_replace('\'', '', $tablename)));
 	}
 
+	public function getDataTable($query) {
+		// Check query parameter
+		if (is_null($query)) {
+			throw new Exception('The query must not be null.');
+		}		
+		$resultset = $this->getDatabase()->query($query);
+        if ($resultset === true) { // Query did not return any result because it was a no result query
+            throw new Exception('Multiple result statement seems to be a no result statement.');
+        }
+        if (!is_object($resultset)) {
+            throw new Exception('Error in query: '.$query);
+        }
+		// Prepare datatable
+		$columncount = $resultset->field_count;
+		$rowcount = $resultset->num_rows;
+		$datatable = new avorium_core_data_DataTable($rowcount, $columncount);
+		// Extract header names even if the resultset is empty
+		for ($i = 0; $i < $columncount; $i++) {
+			$datatable->setHeader($i, $resultset->fetch_field_direct($i)->name);
+		}
+		// Fill datatable cells
+		$rownum = 0;
+        while ($row = $resultset->fetch_row()) {
+			for ($i = 0; $i < $columncount; $i++) {
+				$datatable->setCellValue($rownum, $i, $row[$i]);
+			}
+			$rownum++;
+        }
+        return $datatable;
+	}
+
 	public function saveDataTable($tablename, $datatable) {
 		// Check parameters for incorrect values
 		if (is_null($tablename)) {

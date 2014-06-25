@@ -189,28 +189,7 @@ abstract class avorium_core_persistence_AbstractPersistenceAdapter {
 	 * @return avorium_core_data_DataTable Datatable with at least one row and 
 	 * column containing the results from the query.
 	 */
-	public function getDataTable($query) {
-		// Check query parameter
-		if (is_null($query)) {
-			throw new Exception('The query must not be null.');
-		}
-		$records = $this->executeMultipleResultQuery($query);
-		$rowcount = count($records);
-		// Extract headers
-		$headernames = array_keys(get_object_vars($records[0]));
-		$columncount = count($headernames);
-		$datatable = new avorium_core_data_DataTable($rowcount, $columncount);
-		for ($i = 0; $i < $columncount; $i++) {
-			$datatable->setHeader($i, $headernames[$i]);
-		}
-		for ($i = 0; $i < $rowcount; $i++) {
-			$row = get_object_vars($records[$i]);
-			for ($j = 0; $j < $columncount; $j++) {
-				$datatable->setCellValue($i, $j, $row[$headernames[$j]]);
-			}
-		}
-		return $datatable;
-	}
+	public abstract function getDataTable($query);
 	
 	/**
 	 * Derived classes have to analyze the datatable, validate its content and
