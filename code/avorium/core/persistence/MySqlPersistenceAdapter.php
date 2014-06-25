@@ -335,6 +335,10 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
 		$headernames = $datatable->getHeaders();
 		$columncount = count($headernames);
 		$datamatrix = $datatable->getDataMatrix();
+		// Ignore empty datatables
+		if (count($datamatrix) < 1) {
+			return;
+		}
         $inserts = array();
         $values = array();
         $updates = array();
@@ -349,7 +353,13 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
 		$primarykeycolumnname = $primarykeys[0]->Column_name;
 		$primarykeycolumnfound = false;
 		foreach ($headernames as $headername) {
+			if ($headername === null) {
+				throw new Exception('The header name is null but must not be.');
+			}
 			$escapedheadername = $this->escapeTableOrColumnName($headername);
+			if (strlen($escapedheadername) < 1) {
+				throw new Exception('The header name is empty but must not be.');
+			}
 			$inserts[] = $escapedheadername;
 			if ($escapedheadername !== $primarykeycolumnname) {
                 $updates[] = $escapedheadername.'=VALUES('.$escapedheadername.')';
@@ -379,7 +389,13 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
 			$values[] = '('.implode(',', $rowvalues).')';
 		}
         $query = 'INSERT INTO '.$escapedtablename.' ('.implode(',', $inserts).') VALUES '.implode(',', $values).' ON DUPLICATE KEY UPDATE '.implode(',', $updates);
-        $this->executeNoResultQuery($query);
+        $resultset = $this->getDatabase()->query($query);
+        if (!$resultset) { // When false is returned, the query was not successful
+            throw new Exception('Error in query: '.$query);
+        }
+        if (mysqli_warning_count($this->getDatabase()) > 0) {
+			throw new Exception('Error saving to database. Maybe a given string value cannot be parsed into the correct data type');
+		}
 	}
 
 }

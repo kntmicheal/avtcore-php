@@ -345,6 +345,10 @@ class avorium_core_persistence_OraclePersistenceAdapter extends avorium_core_per
 		$escapedheadernames = array();
 		$columncount = count($headernames);
 		$datamatrix = $datatable->getDataMatrix();
+		// Ignore empty datatables
+		if (count($datamatrix) < 1) {
+			return;
+		}
         $selects = array();
         $insertcolumns = array();
 		$insertvalues = array();
@@ -358,7 +362,13 @@ class avorium_core_persistence_OraclePersistenceAdapter extends avorium_core_per
 		$primarykeycolumnname = $primarykeys[0]->COLUMN_NAME;
 		$primarykeycolumnfound = false;
 		foreach ($headernames as $headername) {
+			if ($headername === null) {
+				throw new Exception('The header name is null but must not be.');
+			}
 			$escapedheadername = $this->escapeTableOrColumnName($headername);
+			if (strlen($escapedheadername) < 1) {
+				throw new Exception('The header name is empty but must not be.');
+			}
 			$escapedheadernames[] = $escapedheadername;
 			$insertcolumns[] = 'T.'.$escapedheadername;
 			$insertvalues[] = 'S.'.$escapedheadername;

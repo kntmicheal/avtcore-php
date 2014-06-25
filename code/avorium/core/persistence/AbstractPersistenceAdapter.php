@@ -176,13 +176,13 @@ abstract class avorium_core_persistence_AbstractPersistenceAdapter {
 	/**
 	 * Executes the query which should be a multiple results query and creates
 	 * a datatable from the result. When the query is invalid or the query does
-	 * not return a result with at least one row, an exception is thrown.
+	 * not return a result, an exception is thrown.
 	 * When the query returns multiple columns with the same name, the datatable
-	 * will only contain one column with that name (the last occurence).
+	 * will contain all columns with that name.
 	 * The order of rows and columns in the datatable is exactly the same as
 	 * the order of the query result.
-	 * The header names of the datatable are set to the column namens the query
-	 * returns.
+	 * The header names of the datatable are set to the column names the query
+	 * returns and are always strings.
 	 * The values are all strings, independent on the database datatypes.
 	 * 
 	 * @param string $query Multiple result query to execute.
@@ -204,6 +204,11 @@ abstract class avorium_core_persistence_AbstractPersistenceAdapter {
 	 * When the datatable contains no primary key column, the datatable cannot
 	 * be stored in the database because there is no mechanism for automatically
 	 * creating primary keys (not all tables have an auto increment column).
+	 * An exception is thrown in this case.
+	 * The derived class must make sure that cell values, which are given as
+	 * strings and which have to be put into database columns with other
+	 * datatypes (e.g. numbers), are parsed into the needed type. If this is
+	 * not possible, the save function must throw an exception.
 	 * 
 	 * @param string $tablename Name of the database table where to store the
 	 * values into.

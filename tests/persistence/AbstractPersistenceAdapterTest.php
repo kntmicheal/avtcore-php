@@ -1183,8 +1183,8 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
 		for ($i = 0; $i < 3; $i++) {
 			$this->assertEquals($records[$i]['UUID'], $result[$i]['UUID'], 'UUID from database is not as expected.');
 			$this->assertEquals($records[$i]['bool']?1:0, $result[$i]['BOOLEAN_VALUE'], 'Boolean value from database is not as expected.');
-			$this->assertEquals($records[$i]['int'], $result[$i]['INT_VALUE'], 'Boolean value from database is not as expected.');
-			$this->assertEquals($records[$i]['string'], $result[$i]['STRING_VALUE'], 'Boolean value from database is not as expected.');
+			$this->assertEquals($records[$i]['int'], $result[$i]['INT_VALUE'], 'Integer value from database is not as expected.');
+			$this->assertEquals($records[$i]['string'], $result[$i]['STRING_VALUE'], 'String value from database is not as expected.');
 		}
 	}
 	
@@ -1263,7 +1263,7 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
 		}
 		// Save giving an invalid table name
         $this->setExpectedException('Exception', 'Invalid table name given: INVALIDTABLENAME');
-		$this->getPersistenceAdapter()->saveDataTable('INVALIDTABLENAME', $datatable, true);
+		$this->getPersistenceAdapter()->saveDataTable('INVALIDTABLENAME', $datatable);
 	}
 	
 	/**
@@ -1273,6 +1273,21 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
 	public function testSaveDataTableNoDataTable() {
         $this->setExpectedException('Exception', 'No data table given.');
 		$this->getPersistenceAdapter()->saveDataTable('POTEST', null);
+	}
+	
+	/**
+	 * When a datatable is given, which contains no rows, nothing should happen
+	 * at all. No exception should be thrown.
+	 * The save function should ignore the request. This can happen with
+	 * automatisms across different systems.
+	 */
+	public function testSaveDataTableNoRows() {
+		$datatable = new avorium_core_data_DataTable(0, 4);
+		$datatable->setHeader(0, 'UUID');
+		$datatable->setHeader(1, 'BOOLEAN_VALUE');
+		$datatable->setHeader(2, 'INT_VALUE');
+		$datatable->setHeader(3, 'STRING_VALUE');
+		$this->getPersistenceAdapter()->saveDataTable('POTEST', $datatable);
 	}
 	
 	/**
@@ -1311,6 +1326,32 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
 	}
 	
 	/**
+	 * When a column name (header name) in a datatable is null, the save
+	 * function should throw an exception because it does not know,
+	 * in which column the data has to be stored.
+	 */
+	public function testSaveDataTableColumnNameNull() {
+		$datatable = new avorium_core_data_DataTable(1, 1);
+		$datatable->setHeader(0, null);
+		$datatable->setCellValue(0, 0, '0');
+        $this->setExpectedException('Exception', 'The header name is null but must not be.');
+		$this->getPersistenceAdapter()->saveDataTable('POTEST', $datatable);
+	}
+	
+	/**
+	 * When a column name (header name) in a datatable is empty, the save
+	 * function should throw an exception because it does not know,
+	 * in which column the data has to be stored.
+	 */
+	public function testSaveDataTableColumnNameEmpty() {
+		$datatable = new avorium_core_data_DataTable(1, 1);
+		$datatable->setHeader(0, '');
+		$datatable->setCellValue(0, 0, '0');
+        $this->setExpectedException('Exception', 'The header name is empty but must not be.');
+		$this->getPersistenceAdapter()->saveDataTable('POTEST', $datatable);
+	}
+	
+	/**
 	 * Currently only boolean, integer and string are supported as PHP value
 	 * types for the saveDataTable function. So this function should throw
 	 * an exception when in one of the cells is datatype which the
@@ -1337,6 +1378,52 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
 		// checks this before it constructs the SQL query because it must
 		// know whether to escape the value in the stamenent or not.
         $this->setExpectedException('Exception', 'Unknown datatype: array');
+		$this->getPersistenceAdapter()->saveDataTable('POTEST', $datatable);
+	}
+	
+	/**
+	 * Teste the behaviour of the saveDataTable function when column values
+	 * are given as strings and stored into columns of different datatypes.
+	 * Curretnly all database connectors should convert strings to integer
+	 * numbers automatically.
+	 */
+	public function testSaveDataTableParseStringsToOtherDatatypes() {
+        $record = ['UUID' => 'uuid1tRMR2', 'bool' => '1', 'int' => '12345', 'string' => 'testReadMultipleRecords 2'];
+		$datatable = new avorium_core_data_DataTable(1, 4);
+		$datatable->setHeader(0, 'UUID');
+		$datatable->setHeader(1, 'BOOLEAN_VALUE');
+		$datatable->setHeader(2, 'INT_VALUE');
+		$datatable->setHeader(3, 'STRING_VALUE');
+		$datatable->setCellValue(0, 0, $record['UUID']);
+		$datatable->setCellValue(0, 1, $record['bool']);
+		$datatable->setCellValue(0, 2, $record['int']);
+		$datatable->setCellValue(0, 3, $record['string']);
+		$this->getPersistenceAdapter()->saveDataTable('POTEST', $datatable);
+		$result = $this->executeQuery('select UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE from POTEST where UUID=\''.$record['UUID'].'\'');
+		$this->assertEquals(1, count($result), 'Wrong row count');
+		$this->assertEquals($record['UUID'], $result[0]['UUID'], 'UUID from database is not as expected.');
+		$this->assertEquals(1, $result[0]['BOOLEAN_VALUE'], 'Boolean value from database is not as expected.');
+		$this->assertEquals($record['int'], $result[0]['INT_VALUE'], 'Integer value from database is not as expected.');
+		$this->assertEquals($record['string'], $result[0]['STRING_VALUE'], 'String value from database is not as expected.');
+	}
+	
+	/**
+	 * Tests the behaviour of the save function when a column contains a string
+	 * which is to be stored into a number column but cannot be parsed into
+	 * a number. In this case the function should throw an exception.
+	 */
+	public function testSaveDataTableStringsNotParseableToDataTypes() {
+        $record = ['UUID' => 'uuid1tRMR2', 'bool' => 'not parsable', 'int' => 'not parsable', 'string' => 'testReadMultipleRecords 2'];
+		$datatable = new avorium_core_data_DataTable(1, 4);
+		$datatable->setHeader(0, 'UUID');
+		$datatable->setHeader(1, 'BOOLEAN_VALUE');
+		$datatable->setHeader(2, 'INT_VALUE');
+		$datatable->setHeader(3, 'STRING_VALUE');
+		$datatable->setCellValue(0, 0, $record['UUID']);
+		$datatable->setCellValue(0, 1, $record['bool']);
+		$datatable->setCellValue(0, 2, $record['int']);
+		$datatable->setCellValue(0, 3, $record['string']);
+        $this->setExpectedException('Exception');
 		$this->getPersistenceAdapter()->saveDataTable('POTEST', $datatable);
 	}
 
