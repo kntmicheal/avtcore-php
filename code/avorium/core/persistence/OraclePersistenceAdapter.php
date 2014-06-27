@@ -292,6 +292,11 @@ class avorium_core_persistence_OraclePersistenceAdapter extends avorium_core_per
 		if (is_null($query)) {
 			throw new Exception('The query must not be null.');
 		}
+		// Temporarily set the decimal characters to english ones to have correct number formats in resulting strings
+		oci_execute(oci_parse($this->getDatabase(), 'begin EXECUTE IMMEDIATE \'ALTER SESSION set nls_numeric_characters=".,"\';end;'));
+		// Temporarily set the date format to yyyy-mm-dd hh:ii:ss for the case that we request dates from the database
+		oci_execute(oci_parse($this->getDatabase(), 'begin EXECUTE IMMEDIATE \'ALTER SESSION set nls_date_format="yyyy-mm-dd hh24:mi:ss"\';end;'));
+		// Execute the given statement
 		$statement = oci_parse($this->getDatabase(), $query);
 		$type = oci_statement_type($statement);
 		try {
@@ -339,6 +344,10 @@ class avorium_core_persistence_OraclePersistenceAdapter extends avorium_core_per
 		if (!is_a($datatable, 'avorium_core_data_DataTable')) {
 			throw new Exception('Data table is not of correct datatype.');
 		}
+		// Temporarily set the decimal characters to english ones to have correct number formats in resulting strings
+		oci_execute(oci_parse($this->getDatabase(), 'begin EXECUTE IMMEDIATE \'ALTER SESSION set nls_numeric_characters=".,"\';end;'));
+		// Temporarily set the date format to yyyy-mm-dd hh:ii:ss for the case that we request dates from the database
+		oci_execute(oci_parse($this->getDatabase(), 'begin EXECUTE IMMEDIATE \'ALTER SESSION set nls_date_format="yyyy-mm-dd hh24:mi:ss"\';end;'));
 		// Process data table
 		$escapedtablename = $this->escapeTableOrColumnName($tablename);
 		$headernames = $datatable->getHeaders();
@@ -381,6 +390,13 @@ class avorium_core_persistence_OraclePersistenceAdapter extends avorium_core_per
 		if (!$primarykeycolumnfound) {
 			throw new Exception('Expected primary key column '.$primarykeycolumnname.' not found.');
 		}
+		// Wee need the column schema from the database to eventually parse
+		// the given values into database data types
+		$columnsarray = $this->executeMultipleResultQuery('select COLUMN_NAME, DATA_TYPE from USER_TAB_COLS where TABLE_NAME = \''.$escapedtablename.'\'');
+		$columns = [];
+		foreach ($columnsarray as $column) {
+			$columns[$column->COLUMN_NAME] = $column->DATA_TYPE;
+		}
 		foreach ($datamatrix as $row) {
 			$rowselects = array();
 			for ($i = 0; $i < $columncount; $i++) {
@@ -390,7 +406,11 @@ class avorium_core_persistence_OraclePersistenceAdapter extends avorium_core_per
 				} else if (is_bool($row[$i])) {
 					$rowselects[] = ($row[$i] ? 1 : 0).' '.$escapedheadernames[$i];
 				} else if (is_numeric($row[$i])) {
-					$rowselects[] = $row[$i].' '.$escapedheadernames[$i];
+					if ($columns[$escapedheadernames[$i]] === 'BINARY_DOUBLE') { // Double must be handled separately in ORACLE
+						$rowselects[] = 'to_binary_double(\''.$row[$i].'\') '.$escapedheadernames[$i];
+					} else {
+						$rowselects[] = $row[$i].' '.$escapedheadernames[$i];
+					}
 				} else if (is_string($row[$i])) {
 					$rowselects[] = '\''.$this->escape($row[$i]).'\' '.$escapedheadernames[$i];
 				} else {

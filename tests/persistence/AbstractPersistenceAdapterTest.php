@@ -43,6 +43,24 @@ require_once dirname(__FILE__).'/../../code/avorium/core/data/DataTable.php';
  */
 abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase {
 	
+	
+	/**
+	 * Derived test classes must do the following steps:
+	 * - Initialize $this->persistenceAdapter with a valid database specific persistence adapter
+	 * - Drop and recreate the database table POTEST with following columns
+	 *   - UUID (string with 40 characters, primary key)
+	 *   - BOOLEAN_VALUE (bit)
+	 *   - INT_VALUE (32 bit integer)
+	 *   - STRING_VALUE (string with 255 characters)
+	 *   - DECIMAL_VALUE (decimal with 30 digits, 10 of them after the decimal point)
+	 *   - DOUBLE_VALUE (64 bit double as in IEEE 754, 2.2251E-308 to 1.798E+308 positive and negative)
+	 *   - TEXT_VALUE (string with 4000 characters, limited due to ORACLE limits)
+	 *   - DATETIME_VALUE (column which can store date and time values between 1900-01-01 00:00:00 and 2999-12-31 23:59:59, prcision to seconds, 1900-01-01 00:00:00 is handled as "UNDEFINED")
+	 */
+	protected function setUp() {
+        parent::setUp();
+	}
+
     // Positive tests
 
     /**
@@ -1669,6 +1687,327 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
 			$this->assertEquals($records[$i]['int'], $result[$i]['INT_VALUE'], 'Boolean value from database is not as expected.');
 			$this->assertEquals($records[$i]['string'], $result[$i]['STRING_VALUE'], 'Boolean value from database is not as expected.');
 		}
+	}
+
+	/**
+	 * Tests the correct conversion of boolean datatypes into strings when
+	 * reading from database and putting the data into a datatable.
+	 * Allowed results: either "1" for true or "0" for false.
+	 */
+	public function testGetDataTableBooleanDataType() {
+		// Insert border values into database
+		$this->executeQuery('insert into POTEST (UUID, BOOLEAN_VALUE) values (\'testuuid0\',0)');
+		$this->executeQuery('insert into POTEST (UUID, BOOLEAN_VALUE) values (\'testuuid1\',1)');
+		// Extract datatable
+		$datatable = $this->getPersistenceAdapter()->getDataTable('select BOOLEAN_VALUE from POTEST order by UUID');
+		$datamatrix = $datatable->getDataMatrix();
+		// Check strings for correct conversion
+		$this->assertEquals('0', $datamatrix[0][0], 'Minimum boolean value is not converted to string as expected.');
+		$this->assertEquals('1', $datamatrix[1][0], 'Maximum boolean value is not converted to string as expected.');
+	}
+
+	/**
+	 * Tests the correct conversion of integer datatypes into strings when
+	 * reading from database and putting the data into a datatable.
+	 * Results must be between "-2147483648" and "2147483647".
+	 */
+	public function testGetDataTableIntegerDataType() {
+		// Insert border values into database
+		$minvalue = '-2147483648';
+		$maxvalue = '2147483647';
+		$this->executeQuery('insert into POTEST (UUID, INT_VALUE) values (\'testuuid0\','.$minvalue.')');
+		$this->executeQuery('insert into POTEST (UUID, INT_VALUE) values (\'testuuid1\','.$maxvalue.')');
+		// Extract datatable
+		$datatable = $this->getPersistenceAdapter()->getDataTable('select INT_VALUE from POTEST order by UUID');
+		$datamatrix = $datatable->getDataMatrix();
+		// Check strings for correct conversion
+		$this->assertEquals($minvalue, $datamatrix[0][0], 'Minimum integer value is not converted to string as expected.');
+		$this->assertEquals($maxvalue, $datamatrix[1][0], 'Maximum integer value is not converted to string as expected.');
+	}
+
+	/**
+	 * Tests the correct reading of strings of a
+	 * maximum length of 255 characters when
+	 * reading from database and putting the data into a datatable.
+	 * Results must contain all special characters and must be UTF8 encoded.
+	 */
+	public function testGetDataTableStringDataType() {
+		// Insert values into database
+		$value = str_pad('', 255, '°!"§$%&/()=?`*\'>; :_+öä#<,.-²³¼¹½¬{[]}\\¸~’–…·|@\t\r\n');
+		$escapedvalue = $this->escape($value);
+		$this->executeQuery('insert into POTEST (UUID, STRING_VALUE) values (\'testuuid0\',\''.$escapedvalue.'\')');
+		// Extract datatable
+		$datatable = $this->getPersistenceAdapter()->getDataTable('select STRING_VALUE from POTEST order by UUID');
+		$datamatrix = $datatable->getDataMatrix();
+		// Check strings for correct conversion
+		$resultstring = $datamatrix[0][0]; 
+		$this->assertEquals(255, strlen($resultstring), 'Result string has not the correct length.');
+		$this->assertEquals($value, $resultstring, 'Result string is not the same as the given one.');
+		$this->assertEquals('UTF-8', mb_detect_encoding($resultstring), 'The string encoding is not UTF8.');
+	}
+
+	/**
+	 * Tests the correct conversion of decimal datatypes into strings when
+	 * reading from database and putting the data into a datatable.
+	 * The results must be strings with optional negative signs and a dot as 
+	 * decimal point character, no thousand-separators, e.g. "-1234.567".
+	 */
+	public function testGetDataTableDecimalDataType() {
+		// Insert border values into database
+		$minvalue = '-9999999999999999999.9999999999';
+		$maxvalue = '9999999999999999999.9999999999';
+		$this->executeQuery('insert into POTEST (UUID, DECIMAL_VALUE) values (\'testuuid0\','.$minvalue.')');
+		$this->executeQuery('insert into POTEST (UUID, DECIMAL_VALUE) values (\'testuuid1\','.$maxvalue.')');
+		// Extract datatable
+		$datatable = $this->getPersistenceAdapter()->getDataTable('select DECIMAL_VALUE from POTEST order by UUID');
+		$datamatrix = $datatable->getDataMatrix();
+		// Check strings for correct conversion
+		$this->assertEquals($minvalue, $datamatrix[0][0], 'Minimum decimal value is not converted to string as expected.');
+		$this->assertEquals($maxvalue, $datamatrix[1][0], 'Maximum decimal value is not converted to string as expected.');
+	}
+
+	/**
+	 * Tests the correct conversion of double datatypes into strings when
+	 * reading from database and putting the data into a datatable.
+	 * Results must be in the format (uppercase "E") "-2.22507485850719E-30" 
+	 * to "1.79769313486230E+308"
+	 */
+	public function testGetDataTableDoubleDataType() {
+		// Insert border values into database
+		$minposvalue = '2.22507485850719E-308';
+		$maxposvalue = '1.79769313486230E308';
+		$minnegvalue = '-2.22507485850719E-308';
+		$maxnegvalue = '-1.79769313486230E308';
+		$this->executeQuery('insert into POTEST (UUID, DOUBLE_VALUE) values (\'testuuid0\','.$minposvalue.')');
+		$this->executeQuery('insert into POTEST (UUID, DOUBLE_VALUE) values (\'testuuid1\','.$maxposvalue.')');
+		$this->executeQuery('insert into POTEST (UUID, DOUBLE_VALUE) values (\'testuuid2\','.$minnegvalue.')');
+		$this->executeQuery('insert into POTEST (UUID, DOUBLE_VALUE) values (\'testuuid3\','.$maxnegvalue.')');
+		// Extract datatable
+		$datatable = $this->getPersistenceAdapter()->getDataTable('select DOUBLE_VALUE from POTEST order by UUID');
+		$datamatrix = $datatable->getDataMatrix();
+		// Check strings for correct conversion
+		$this->assertEquals($minposvalue, $datamatrix[0][0], 'Minimum positive double value is not converted to string as expected.');
+		$this->assertEquals($maxposvalue, $datamatrix[1][0], 'Maximum positive double value is not converted to string as expected.');
+		$this->assertEquals($minnegvalue, $datamatrix[2][0], 'Minimum negative double value is not converted to string as expected.');
+		$this->assertEquals($maxnegvalue, $datamatrix[3][0], 'Maximum negative double value is not converted to string as expected.');
+	}
+
+	/**
+	 * Tests the correct conversion of text datatypes into strings of a
+	 * maximum length of 4000 (ORACLE limits) characters when reading from 
+	 * database and putting the data into a datatable.
+	 * Results must contain all special characters and must be UTF8 encoded.
+	 */
+	public function testGetDataTableTextDataType() {
+		// Insert values into database
+		$value = str_pad('', 4000, '         °!"§$%&/()=?`*\'>; :_+öä#<,.-²³¼¹½¬{[]}\\¸~’–…·|@\t\r\n'); // Must be 80 chars to pad correctly to 4000 characters
+		$escapedvalue = $this->escape($value);
+		$this->executeQuery('insert into POTEST (UUID, TEXT_VALUE) values (\'testuuid0\',\''.$escapedvalue.'\')');
+		// Extract datatable
+		$datatable = $this->getPersistenceAdapter()->getDataTable('select TEXT_VALUE from POTEST order by UUID');
+		$datamatrix = $datatable->getDataMatrix();
+		// Check strings for correct conversion
+		$resultstring = $datamatrix[0][0]; 
+		$this->assertEquals(4000, strlen($resultstring), 'Result string has not the correct length.');
+		$this->assertEquals($value, $resultstring, 'Result string is not the same as the given one.');
+		$this->assertEquals('UTF-8', mb_detect_encoding($resultstring), 'The string encoding is not UTF8.');
+	}
+
+	/**
+	 * Tests the correct conversion of datetime datatypes into strings when
+	 * reading from database and putting the data into a datatable.
+	 * The result must be a string in the format yyyy-mm-dd hh:ii:ss between 
+	 * 1970-01-01 00:00:00 and 3999-12-31 23:59:59.
+	 */
+	public function testGetDataTableDateTimeDataType() {
+		// Insert border values into database
+		$minvalue = '1900-01-01 00:00:00';
+		$maxvalue = '3999-12-31 23:59:59';
+		$this->executeQuery('insert into POTEST (UUID, DATETIME_VALUE) values (\'testuuid0\',\''.$minvalue.'\')');
+		$this->executeQuery('insert into POTEST (UUID, DATETIME_VALUE) values (\'testuuid1\',\''.$maxvalue.'\')');
+		// Extract datatable
+		$datatable = $this->getPersistenceAdapter()->getDataTable('select DATETIME_VALUE from POTEST order by UUID');
+		$datamatrix = $datatable->getDataMatrix();
+		// Check strings for correct conversion
+		$this->assertEquals($minvalue, $datamatrix[0][0], 'Minimum datetime value is not converted to string as expected.');
+		$this->assertEquals($maxvalue, $datamatrix[1][0], 'Maximum datetime value is not converted to string as expected.');
+	}
+
+	/**
+	 * Tests the correct conversion of strings into boolean datatypes when
+	 * writing to database.
+	 * Input: either "1" for true or "0" for false.
+	 */
+	public function testSaveDataTableBooleanDataType() {
+		$minvalue = '0';
+		$maxvalue = '1';
+		// Store datatable
+		$datatable = new avorium_core_data_DataTable(2, 2);
+		$datatable->setHeader(0, 'UUID');
+		$datatable->setHeader(1, 'BOOLEAN_VALUE');
+		$datatable->setCellValue(0, 0, 'testuuid0');
+		$datatable->setCellValue(0, 1, $minvalue);
+		$datatable->setCellValue(1, 0, 'testuuid1');
+		$datatable->setCellValue(1, 1, $maxvalue);
+		$this->getPersistenceAdapter()->saveDataTable('POTEST', $datatable);
+		// Read database via SQL
+		$results = $this->executeQuery('select BOOLEAN_VALUE from POTEST order by UUID');
+		// Compare values
+		$this->assertEquals($minvalue, $results[0][0], 'Minimum boolean value is not converted from string as expected.');
+		$this->assertEquals($maxvalue, $results[1][0], 'Maximum boolean value is not converted from string as expected.');
+	}
+
+	/**
+	 * Tests the correct conversion of strings into integer datatypes when
+	 * writing to database.
+	 * Input: between "-2147483648" and "2147483647".
+	 */
+	public function testSaveDataTableIntegerDataType() {
+		$minvalue = '-2147483648';
+		$maxvalue = '2147483647';
+		// Store datatable
+		$datatable = new avorium_core_data_DataTable(2, 2);
+		$datatable->setHeader(0, 'UUID');
+		$datatable->setHeader(1, 'INT_VALUE');
+		$datatable->setCellValue(0, 0, 'testuuid0');
+		$datatable->setCellValue(0, 1, $minvalue);
+		$datatable->setCellValue(1, 0, 'testuuid1');
+		$datatable->setCellValue(1, 1, $maxvalue);
+		$this->getPersistenceAdapter()->saveDataTable('POTEST', $datatable);
+		// Read database via SQL
+		$results = $this->executeQuery('select INT_VALUE from POTEST order by UUID');
+		// Compare values
+		$this->assertEquals($minvalue, $results[0][0], 'Minimum integer value is not converted from string as expected.');
+		$this->assertEquals($maxvalue, $results[1][0], 'Maximum integer value is not converted from string as expected.');
+	}
+
+	/**
+	 * Tests the correct storage of strings with a maximum length of 255
+	 * characters when writing into the database.
+	 * Input can contain all special characters and is UTF8 encoded.
+	 */
+	public function testSaveDataTableStringDataType() {
+		$value = str_pad('', 255, '°!"§$%&/()=?`*\'>; :_+öä#<,.-²³¼¹½¬{[]}\\¸~’–…·|@\t\r\n');
+		// Store datatable
+		$datatable = new avorium_core_data_DataTable(1, 2);
+		$datatable->setHeader(0, 'UUID');
+		$datatable->setHeader(1, 'STRING_VALUE');
+		$datatable->setCellValue(0, 0, 'testuuid0');
+		$datatable->setCellValue(0, 1, $value);
+		$this->getPersistenceAdapter()->saveDataTable('POTEST', $datatable);
+		// Read database via SQL
+		$results = $this->executeQuery('select STRING_VALUE from POTEST order by UUID');
+		// Compare values
+		$resultstring = $results[0][0];
+		$this->assertEquals(255, strlen($resultstring), 'Result string has not the correct length.');
+		$this->assertEquals($value, $resultstring, 'Result string is not the same as the given one.');
+		$this->assertEquals('UTF-8', mb_detect_encoding($resultstring), 'The string encoding is not UTF8.');
+	}
+
+	/**
+	 * Tests the correct conversion of strings into decimal datatypes when
+	 * writing to database.
+	 * Input can be strings with optional negative signs and a dot as 
+	 * decimal point character, no thousand-separators, e.g. "-1234.567".
+	 */
+	public function testSaveDataTableDecimalDataType() {
+		$minvalue = '-9999999999999999999.9999999999';
+		$maxvalue = '9999999999999999999.9999999999';
+		// Store datatable
+		$datatable = new avorium_core_data_DataTable(2, 2);
+		$datatable->setHeader(0, 'UUID');
+		$datatable->setHeader(1, 'DECIMAL_VALUE');
+		$datatable->setCellValue(0, 0, 'testuuid0');
+		$datatable->setCellValue(0, 1, $minvalue);
+		$datatable->setCellValue(1, 0, 'testuuid1');
+		$datatable->setCellValue(1, 1, $maxvalue);
+		$this->getPersistenceAdapter()->saveDataTable('POTEST', $datatable);
+		// Read database via SQL
+		$results = $this->executeQuery('select DECIMAL_VALUE from POTEST order by UUID');
+		// Compare values
+		$this->assertEquals($minvalue, $results[0][0], 'Minimum decimal value is not converted from string as expected.');
+		$this->assertEquals($maxvalue, $results[1][0], 'Maximum decimal value is not converted from string as expected.');
+	}
+
+	/**
+	 * Tests the correct conversion of strings into double datatypes when
+	 * writing to database.
+	 * Input is in the format (uppercase "E") "-2.22507485850719E-30" 
+	 * to "1.79769313486230E+308"
+	 */
+	public function testSaveDataTableDoubleDataType() {
+		$minposvalue = '2.22507485850719E-308';
+		$maxposvalue = '1.79769313486230E308';
+		$minnegvalue = '-2.22507485850719E-308';
+		$maxnegvalue = '-1.79769313486230E308';
+		// Store datatable
+		$datatable = new avorium_core_data_DataTable(4, 2);
+		$datatable->setHeader(0, 'UUID');
+		$datatable->setHeader(1, 'DOUBLE_VALUE');
+		$datatable->setCellValue(0, 0, 'testuuid0');
+		$datatable->setCellValue(0, 1, $minposvalue);
+		$datatable->setCellValue(1, 0, 'testuuid1');
+		$datatable->setCellValue(1, 1, $maxposvalue);
+		$datatable->setCellValue(2, 0, 'testuuid2');
+		$datatable->setCellValue(2, 1, $minnegvalue);
+		$datatable->setCellValue(3, 0, 'testuuid3');
+		$datatable->setCellValue(3, 1, $maxnegvalue);
+		$this->getPersistenceAdapter()->saveDataTable('POTEST', $datatable);
+		// Read database via SQL
+		$results = $this->executeQuery('select DOUBLE_VALUE from POTEST order by UUID');
+		// Compare values
+		$this->assertEquals($minposvalue, $results[0][0], 'Minimum positive double value is not converted from string as expected.');
+		$this->assertEquals($maxposvalue, $results[1][0], 'Maximum positive double value is not converted from string as expected.');
+		$this->assertEquals($minnegvalue, $results[2][0], 'Minimum negative double value is not converted from string as expected.');
+		$this->assertEquals($maxnegvalue, $results[3][0], 'Maximum negative double value is not converted from string as expected.');
+	}
+
+	/**
+	 * Tests the correct storage of strings with a maximum length of 65535
+	 * characters when writing into the database.
+	 * Input can contain all special characters and is UTF8 encoded.
+	 */
+	public function testSaveDataTableTextDataType() {
+		$value = str_pad('', 4000, '         °!"§$%&/()=?`*\'>; :_+öä#<,.-²³¼¹½¬{[]}\\¸~’–…·|@\t\r\n'); // Must be 80 chars to pad correctly to 4000 characters
+		// Store datatable
+		$datatable = new avorium_core_data_DataTable(1, 2);
+		$datatable->setHeader(0, 'UUID');
+		$datatable->setHeader(1, 'TEXT_VALUE');
+		$datatable->setCellValue(0, 0, 'testuuid0');
+		$datatable->setCellValue(0, 1, $value);
+		$this->getPersistenceAdapter()->saveDataTable('POTEST', $datatable);
+		// Read database via SQL
+		$results = $this->executeQuery('select TEXT_VALUE from POTEST order by UUID');
+		// Compare values
+		$resultstring = $results[0][0];
+		$this->assertEquals(4000, strlen($resultstring), 'Result string has not the correct length.');
+		$this->assertEquals($value, $resultstring, 'Result string is not the same as the given one.');
+		$this->assertEquals('UTF-8', mb_detect_encoding($resultstring), 'The string encoding is not UTF8.');
+	}
+
+	/**
+	 * Tests the correct conversion of strings into datetime datatypes when
+	 * writing to database.
+	 * The input is a string in the format yyyy-mm-dd hh:ii:ss between 
+	 * 1970-01-01 00:00:00 and 3999-12-31 23:59:59.
+	 */
+	public function testSaveDataTableDateTimeDataType() {
+		$minvalue = '1900-01-01 00:00:00';
+		$maxvalue = '3999-12-31 23:59:59';
+		// Store datatable
+		$datatable = new avorium_core_data_DataTable(2, 2);
+		$datatable->setHeader(0, 'UUID');
+		$datatable->setHeader(1, 'DATETIME_VALUE');
+		$datatable->setCellValue(0, 0, 'testuuid0');
+		$datatable->setCellValue(0, 1, $minvalue);
+		$datatable->setCellValue(1, 0, 'testuuid1');
+		$datatable->setCellValue(1, 1, $maxvalue);
+		$this->getPersistenceAdapter()->saveDataTable('POTEST', $datatable);
+		// Read database via SQL
+		$results = $this->executeQuery('select DATETIME_VALUE from POTEST order by UUID');
+		// Compare values
+		$this->assertEquals($minvalue, $results[0][0], 'Minimum datetime value is not converted from string as expected.');
+		$this->assertEquals($maxvalue, $results[1][0], 'Maximum datetime value is not converted from string as expected.');
 	}
 
     // helper functions

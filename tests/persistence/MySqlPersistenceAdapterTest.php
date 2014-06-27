@@ -58,10 +58,27 @@ extends test_persistence_AbstractPersistenceAdapterTest {
         );
         // Clean database tables by recreating them
         $this->mysqli->query('drop table POTEST');
-        $this->mysqli->query('CREATE TABLE POTEST (UUID VARCHAR(40) NOT NULL, BOOLEAN_VALUE tinyint, INT_VALUE int, STRING_VALUE varchar(255), PRIMARY KEY (UUID))');
+        $this->mysqli->query('CREATE TABLE POTEST ('
+				. 'UUID VARCHAR(40) NOT NULL, '
+				. 'BOOLEAN_VALUE tinyint(1), '
+				. 'INT_VALUE int, '
+				. 'STRING_VALUE varchar(255), '
+				. 'DECIMAL_VALUE decimal(30,10), '
+				. 'DOUBLE_VALUE double, '
+				. 'TEXT_VALUE text(4000), '
+				. 'DATETIME_VALUE datetime, '
+				. 'PRIMARY KEY (UUID))');
     }
+	
+	/**
+	 * Closes opened database connections.
+	 */
+	protected function tearDown() {
+		$this->mysqli->close();
+		parent::tearDown();
+	}
 
-    protected function executeQuery($query) {
+	protected function executeQuery($query) {
         $resultset = $this->mysqli->query($query);
         $result = array();
         if ($resultset === true || $resultset === false) {
