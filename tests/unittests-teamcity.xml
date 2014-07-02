@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<phpunit
-	verbose="true"
-	beStrictAboutTestsThatDoNotTestAnything="true"
->
+<phpunit verbose="true">
 	<php>
 		<!-- These settings are available as $_GLOBAL variables in PHPUnit -->
 		<!-- See http://phpunit.de/manual/3.7/en/database.html -->
