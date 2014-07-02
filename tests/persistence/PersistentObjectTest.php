@@ -33,7 +33,27 @@ require_once dirname(__FILE__).'/PersistentObjectTestPersistentObjectNoTableName
  * automatic property initialization in the constructor.
  */
 class test_persistence_PersistentObjectTest extends PHPUnit_Framework_TestCase {
+
+	/**
+	 * Tests the creation of a persistent object with a default constructor#
+	 * without parameters.
+	 */
+    public function testDefaultInitialization() {
+        $ponormal = new test_persistence_PersistentObjectTestPersistentObject();
+		$ponormal->uuid = 'abcdef';
+		$ponormal->booleanValue = true;
+		$ponormal->intValue= 1234567890;
+		$ponormal->stringValue = 'Hello world!';
+        $this->assertEquals('abcdef', $ponormal->uuid, 'Uuid of persistent object is not as expected.');
+        $this->assertEquals(true, $ponormal->booleanValue, 'Uuid of persistent object is not as expected.');
+        $this->assertEquals(1234567890, $ponormal->intValue, 'Uuid of persistent object is not as expected.');
+        $this->assertEquals('Hello world!', $ponormal->stringValue, 'Uuid of persistent object is not as expected.');
+    }
     
+	/**
+	 * Tests the creation of a persistent object with giving a parameter array
+	 * to the constructor.
+	 */
     public function testPropertyInitialization() {
         // Initialize persistent object with constructor array
         $ponormal = new test_persistence_PersistentObjectTestPersistentObject(array(
