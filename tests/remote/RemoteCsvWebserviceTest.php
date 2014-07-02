@@ -58,7 +58,7 @@ class test_remote_RemoteCsvWebserviceTest extends PHPUnit_Framework_TestCase {
 	
 	protected function setUp() {
 		parent::setUp();
-		$basedir = dirname(getcwd());
+		$basedir = dirname(dirname(dirname(__FILE__)));
 		$this->prepareLocalConfigFile($basedir.'/localconfig.php');
 		$this->serverhandle = proc_open('php -S '.$GLOBALS['TEST_WEBSERVER'].' -t '.$basedir, array(), $this->serverpipes);
 		$this->assertTrue(is_resource($this->serverhandle), 'Could not start internal webserver');
