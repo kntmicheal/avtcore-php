@@ -14,21 +14,8 @@
 		<var name="TEST_WEBSERVER" value="localhost:8888" />
 	</php>
 	<testsuites>
-		<testsuite name="General_Unit_Tests">
-			<file>./persistence/PersistentObjectTest.php</file>
-			<file>./data/DataTableTest.php</file>
-			<file>./data/CsvParserTest.php</file>
-		</testsuite>
-		<testsuite name="MySQL_Unit_Tests">
-			<file>./persistence/MySqlPersistenceAdapterTest.php</file>
-			<file>./io/MySqlCsvWebServiceTest.php</file>
-		</testsuite>
-		<testsuite name="Oracle_Unit_Tests">
-			<file>./persistence/OraclePersistenceAdapterTest.php</file>
-			<file>./io/OracleCsvWebServiceTest.php</file>
-		</testsuite>
-		<testsuite name="Remote_Unit_Tests">
-			<file>./remote/RemoteCsvWebServiceTest.php</file>
+		<testsuite name="All">
+			<directory>./</directory>
 		</testsuite>
 	</testsuites>
 	<filter>
