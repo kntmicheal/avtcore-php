@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<phpunit verbose="true">
+<phpunit
+	verbose="true"
+	beStrictAboutTestsThatDoNotTestAnything="true"
+>
 	<php>
 		<!-- These settings are available as $GLOBALS variables in PHPUnit -->
 		<!-- See http://phpunit.de/manual/3.7/en/database.html -->
@@ -13,8 +16,18 @@
 		<var name="TEST_ORALCE_NLS_LANG" value="AL32UTF8" />
 	</php>
 	<testsuites>
-		<testsuite name="All">
-			<directory>./</directory>
+		<testsuite name="General_Unit_Tests">
+			<file>./persistence/PersistentObjectTest.php</file>
+			<file>./data/DataTableTest.php</file>
+			<file>./data/CsvParserTest.php</file>
+		</testsuite>
+		<testsuite name="MySQL_Unit_Tests">
+			<file>./persistence/MySqlPersistenceAdapterTest.php</file>
+			<file>./io/MySqlCsvWebServiceTest.php</file>
+		</testsuite>
+		<testsuite name="Oracle_Unit_Tests">
+			<file>./persistence/OraclePersistenceAdapterTest.php</file>
+			<file>./io/OracleCsvWebServiceTest.php</file>
 		</testsuite>
 	</testsuites>
 	<filter>
