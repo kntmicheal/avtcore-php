@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit verbose="true">
 	<php>
-		<!-- These settings are available as $_GLOBAL variables in PHPUnit -->
+		<!-- These settings are available as $GLOBALS variables in PHPUnit -->
 		<!-- See http://phpunit.de/manual/3.7/en/database.html -->
 		<var name="TEST_MYSQL_DB_HOST" value="127.0.0.1" />
 		<var name="TEST_MYSQL_DB_USERNAME" value="avtcoretest" />
@@ -13,8 +13,13 @@
 		<var name="TEST_ORALCE_NLS_LANG" value="AL32UTF8" />
 	</php>
 	<testsuites>
-		<testsuite name="avtcore">
+		<testsuite name="All">
 			<directory>./</directory>
 		</testsuite>
 	</testsuites>
+	<filter>
+		<whitelist>
+			<directory suffix=".php">../code/</directory>
+		</whitelist>
+	</filter>
 </phpunit>
