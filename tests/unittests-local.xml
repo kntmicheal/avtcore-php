@@ -14,6 +14,7 @@
 		<var name="TEST_ORACLE_DB_USERNAME" value="avtcoretest" />
 		<var name="TEST_ORACLE_DB_PASSWORD" value="avtcoretest" />
 		<var name="TEST_ORALCE_NLS_LANG" value="AL32UTF8" />
+		<var name="TEST_WEBSERVER" value="localhost:8888" />
 	</php>
 	<testsuites>
 		<testsuite name="General_Unit_Tests">
@@ -28,6 +29,9 @@
 		<testsuite name="Oracle_Unit_Tests">
 			<file>./persistence/OraclePersistenceAdapterTest.php</file>
 			<file>./io/OracleCsvWebServiceTest.php</file>
+		</testsuite>
+		<testsuite name="Remote_Unit_Tests">
+			<file>./remote/RemoteCsvWebServiceTest.php</file>
 		</testsuite>
 	</testsuites>
 	<filter>
