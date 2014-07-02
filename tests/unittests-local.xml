@@ -22,13 +22,12 @@
 		<testsuite name="MySQL_Unit_Tests">
 			<file>./persistence/MySqlPersistenceAdapterTest.php</file>
 			<file>./io/MySqlCsvWebServiceTest.php</file>
+			<file>./remote/MySqlRemoteCsvWebServiceTest.php</file>
 		</testsuite>
 		<testsuite name="Oracle_Unit_Tests">
 			<file>./persistence/OraclePersistenceAdapterTest.php</file>
 			<file>./io/OracleCsvWebServiceTest.php</file>
-		</testsuite>
-		<testsuite name="Remote_Unit_Tests">
-			<file>./remote/RemoteCsvWebServiceTest.php</file>
+			<file>./remote/OracleRemoteCsvWebServiceTest.php</file>
 		</testsuite>
 	</testsuites>
 	<filter>

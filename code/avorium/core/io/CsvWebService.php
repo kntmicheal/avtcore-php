@@ -128,7 +128,7 @@ class avorium_core_io_CsvWebService {
 			throw new Exception('The request content must not be null.');
 		}
 		// Split lines by \n and trim them
-		$lines = split("\n", $content);
+		$lines = explode ("\n", $content);
 		// Check for second line
 		if (count($lines) < 2) {
 			throw new Exception('There is no second line.');

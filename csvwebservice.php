@@ -27,18 +27,27 @@
 require_once dirname(__FILE__).'/localconfig.php';
 require_once dirname(__FILE__).'/code/avorium/core/io/CsvWebService.php';
 
+// Internal PHP errors should be handled like exceptions (ORACLE uses the old
+// way)
+// See http://www.php.net/manual/de/class.errorexception.php and http://www.php.net/manual/de/language.exceptions.php
+function exception_error_handler($errno, $errstr, $errfile, $errline ) {
+    throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
+}
+set_error_handler("exception_error_handler");
+
 $method = strtolower(filter_input(INPUT_SERVER, 'REQUEST_METHOD'));
 $postdata = file_get_contents('php://input');
 
 // React to POST only!
 if ($method !== 'post') {
     http_response_code(400);
-    die;
+    exit;
 }
 
 try {
 	// Process request
 	$cws = new avorium_core_io_CsvWebService();
+	// The global variable must be set before, e.g. in the localconfig.php file
 	$cws->setPersistenceAdapter($GLOBALS['PersistenceAdapter']);
 	$response = $cws->parseRequest($postdata);
 	// Send header data
@@ -49,5 +58,5 @@ try {
 	// Exception occured, log it and return simple error code
 	error_log($exc->getMessage().' in '.$exc->getTraceAsString().' POSTDATA: '.$postdata);
     http_response_code(400);
-    die;
+    exit;
 }
