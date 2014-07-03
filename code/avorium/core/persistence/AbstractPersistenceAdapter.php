@@ -184,6 +184,15 @@ abstract class avorium_core_persistence_AbstractPersistenceAdapter {
 	 * The header names of the datatable are set to the column names the query
 	 * returns and are always strings.
 	 * The values are all strings, independent on the database datatypes.
+	 * The following default conversions the concrete persistence adapters must
+	 * do when creating strings from the database content:
+	 * - boolean: either "1" for true or "0" for false
+	 * - integer: "-2147483648" to "2147483647"
+	 * - string: as it comes from the database, encoded as UTF8
+	 * - decimal: strings with optional negative signs and a dot as decimal point character, no thousand-separators
+	 * - double: sample format (uppercase "E") "-2.22507485850719E-308" to "1.79769313486230E+308"
+	 * - text: as it comes from the database, encoded as UTF8
+	 * - datetime: string in the format yyyy-mm-dd hh:ii:ss between 1970-01-01 00:00:00 and 3999-12-31 23:59:59.
 	 * 
 	 * @param string $query Multiple result query to execute.
 	 * @return avorium_core_data_DataTable Datatable with at least one row and 
@@ -209,6 +218,16 @@ abstract class avorium_core_persistence_AbstractPersistenceAdapter {
 	 * strings and which have to be put into database columns with other
 	 * datatypes (e.g. numbers), are parsed into the needed type. If this is
 	 * not possible, the save function must throw an exception.
+	 * The following default conversions the concrete persistence adapters must
+	 * support when parsing strings from the datatable into the column specific
+	 * datatypes:
+	 * - boolean: either "1" for true or "0" for false
+	 * - integer: "-2147483648" to "2147483647"
+	 * - string: as it comes from the database, encoded as UTF8
+	 * - decimal: strings with optional negative signs and a dot as decimal point character, no thousand-separators
+	 * - double: sample format (uppercase "E") "-2.22507485850719E-308" to "1.79769313486230E+308"
+	 * - text: as it comes from the database, encoded as UTF8, limited to 4000 characters due to ORACLE limits
+	 * - datetime: string in the format yyyy-mm-dd hh:ii:ss between 1970-01-01 00:00:00 and 3999-12-31 23:59:59
 	 * 
 	 * @param string $tablename Name of the database table where to store the
 	 * values into.

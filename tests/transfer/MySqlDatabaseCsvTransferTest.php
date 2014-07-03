@@ -1,6 +1,6 @@
 <?php
 
-/* 
+/*
  * The MIT License
  *
  * Copyright 2014 Ronny Hildebrandt <ronny.hildebrandt@avorium.de>.
@@ -25,14 +25,25 @@
  */
 
 require_once dirname(__FILE__).'/../../code/avorium/core/persistence/MySqlPersistenceAdapter.php';
-require_once dirname(__FILE__).'/AbstractPersistenceAdapterTest.php';
+require_once dirname(__FILE__).'/AbstractDatabaseCsvTransferTest.php';
 
 /**
- * Persistence adapter tests especially for MySQL databases.
+ * Tests the transfer of database tables from a server with the help of transfer
+ * functions based on MySQL database on the remote host.
  */
-class test_persistence_MySqlPersistenceAdapterTest 
-extends test_persistence_AbstractPersistenceAdapterTest {
+class test_remote_MySqlDatabaseCsvTransferTest extends test_remote_AbstractDatabaseCsvTransferTest {
 	
+	protected $serverhandle;
+	protected $serverpipes;
+	protected $serverpid;
+	
+	protected function prepareLocalConfigFile($filename) {
+		$config = "<?php\n"
+				."require_once dirname(__FILE__).'/code/avorium/core/persistence/MySqlPersistenceAdapter.php';\n"
+				.'$GLOBALS[\'PersistenceAdapter\'] = new avorium_core_persistence_MySqlPersistenceAdapter(\''.$GLOBALS['TEST_MYSQL_DB_HOST'].'\', \''.$GLOBALS['TEST_MYSQL_DB_DATABASE'].'\', \''.$GLOBALS['TEST_MYSQL_DB_USERNAME'].'\', \''.$GLOBALS['TEST_MYSQL_DB_PASSWORD'].'\');';
+		file_put_contents($filename, $config);
+	}
+		
     /**
      * Defines the MySQL persistence adapter to be used and prepares the
      * database (cleans tables).
@@ -50,62 +61,13 @@ extends test_persistence_AbstractPersistenceAdapterTest {
                 $this->username, 
                 $this->password
             );
-        $this->mysqli = mysqli_connect(
-            $this->host, 
-            $this->username, 
-            $this->password, 
-            $this->database
-        );
         // Clean database tables by recreating them
-        $this->mysqli->query('drop table POTEST');
-        $this->mysqli->query('CREATE TABLE POTEST ('
+        $this->persistenceAdapter->executeNoResultQuery('drop table POTEST');
+        $this->persistenceAdapter->executeNoResultQuery('CREATE TABLE POTEST ('
 				. 'UUID VARCHAR(40) NOT NULL, '
-				. 'BOOLEAN_VALUE tinyint(1), '
-				. 'INT_VALUE int, '
 				. 'STRING_VALUE varchar(255), '
-				. 'DECIMAL_VALUE decimal(30,10), '
-				. 'DOUBLE_VALUE double, '
-				. 'TEXT_VALUE text(4000), '
-				. 'DATETIME_VALUE datetime, '
 				. 'PRIMARY KEY (UUID))');
     }
-	
-	/**
-	 * Closes opened database connections.
-	 */
-	protected function tearDown() {
-		$this->mysqli->close();
-		parent::tearDown();
-	}
 
-	protected function executeQuery($query) {
-        $resultset = $this->mysqli->query($query);
-        $result = array();
-        if ($resultset === true || $resultset === false) {
-            return $result;
-        } // Can happen with statements which have no result (CREATE TABLE)
-        while ($row = $resultset->fetch_array()) {
-            $result[] = $row;
-        }
-        return $result;
-    }
-
-    protected function escape($string) {
-        return mysqli_real_escape_string($this->mysqli, $string);
-    }
-
-    protected function getErrornousPersistenceAdapter() {
-        return new avorium_core_persistence_MySqlPersistenceAdapter(
-            'wronghost', 
-            'wrongdatabase', 
-            'wrongusername', 
-            'wrongpassword'
-        );
-    }
-
-	protected function createTestTable() {
-        $this->executeQuery('CREATE TABLE POTEST (UUID VARCHAR(40) NOT NULL, PRIMARY KEY (UUID))');
-	}
-
-	// All other test methods are defined in the parent abstract class.
+	// All test cases are defined in the abstract base class
 }

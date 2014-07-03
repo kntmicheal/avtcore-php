@@ -1,7 +1,7 @@
 <?php
 
 /* 
- * The MIT License
+public function The MIT License
  *
  * Copyright 2014 Ronny Hildebrandt <ronny.hildebrandt@avorium.de>.
  *
@@ -25,13 +25,12 @@
  */
 
 require_once dirname(__FILE__).'/../../code/avorium/core/persistence/MySqlPersistenceAdapter.php';
-require_once dirname(__FILE__).'/AbstractPersistenceAdapterTest.php';
+require_once dirname(__FILE__).'/AbstractCsvWebServiceTest.php';
 
 /**
- * Persistence adapter tests especially for MySQL databases.
+ * Tests the functionality of the CsvWebService class for MySQL databases.
  */
-class test_persistence_MySqlPersistenceAdapterTest 
-extends test_persistence_AbstractPersistenceAdapterTest {
+class test_io_MySqlCsvWebServiceTest extends test_io_AbstractCsvWebServiceTest {
 	
     /**
      * Defines the MySQL persistence adapter to be used and prepares the
@@ -60,13 +59,8 @@ extends test_persistence_AbstractPersistenceAdapterTest {
         $this->mysqli->query('drop table POTEST');
         $this->mysqli->query('CREATE TABLE POTEST ('
 				. 'UUID VARCHAR(40) NOT NULL, '
-				. 'BOOLEAN_VALUE tinyint(1), '
-				. 'INT_VALUE int, '
-				. 'STRING_VALUE varchar(255), '
-				. 'DECIMAL_VALUE decimal(30,10), '
-				. 'DOUBLE_VALUE double, '
-				. 'TEXT_VALUE text(4000), '
-				. 'DATETIME_VALUE datetime, '
+				. 'STRING_VALUE_1 varchar(255), '
+				. 'STRING_VALUE_2 varchar(255), '
 				. 'PRIMARY KEY (UUID))');
     }
 	
@@ -77,35 +71,4 @@ extends test_persistence_AbstractPersistenceAdapterTest {
 		$this->mysqli->close();
 		parent::tearDown();
 	}
-
-	protected function executeQuery($query) {
-        $resultset = $this->mysqli->query($query);
-        $result = array();
-        if ($resultset === true || $resultset === false) {
-            return $result;
-        } // Can happen with statements which have no result (CREATE TABLE)
-        while ($row = $resultset->fetch_array()) {
-            $result[] = $row;
-        }
-        return $result;
-    }
-
-    protected function escape($string) {
-        return mysqli_real_escape_string($this->mysqli, $string);
-    }
-
-    protected function getErrornousPersistenceAdapter() {
-        return new avorium_core_persistence_MySqlPersistenceAdapter(
-            'wronghost', 
-            'wrongdatabase', 
-            'wrongusername', 
-            'wrongpassword'
-        );
-    }
-
-	protected function createTestTable() {
-        $this->executeQuery('CREATE TABLE POTEST (UUID VARCHAR(40) NOT NULL, PRIMARY KEY (UUID))');
-	}
-
-	// All other test methods are defined in the parent abstract class.
 }
