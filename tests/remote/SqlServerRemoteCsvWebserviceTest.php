@@ -69,5 +69,13 @@ class test_remote_SqlServerRemoteCsvWebserviceTest extends test_remote_AbstractR
 				. 'PRIMARY KEY (UUID))');
     }
 
+	/**
+	 * Closes database connection of persistence adapter used in tests
+	 */
+	protected function tearDown() {
+		sqlsrv_close($this->persistenceAdapter->getDatabase());
+		parent::tearDown();
+	}
+
 	// All test cases are defined in the abstract base class
 }

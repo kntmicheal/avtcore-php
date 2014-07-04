@@ -74,6 +74,7 @@ extends test_persistence_AbstractPersistenceAdapterTest {
 	 * Closes opened database connections.
 	 */
 	protected function tearDown() {
+		$this->persistenceAdapter->getDatabase()->close();
 		$this->mysqli->close();
 		parent::tearDown();
 	}

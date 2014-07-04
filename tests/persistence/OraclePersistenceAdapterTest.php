@@ -75,6 +75,7 @@ extends test_persistence_AbstractPersistenceAdapterTest {
 	 */
 	protected function tearDown() {
 		oci_close($this->oci);
+		oci_close($this->persistenceAdapter->getDatabase());
 		parent::tearDown();
 	}
 

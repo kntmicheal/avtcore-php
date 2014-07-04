@@ -58,7 +58,7 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
 	 * 
 	 * @return object MySQL database resource
 	 */
-    private function getDatabase() {
+    public function getDatabase() {
 		if ($this->db === null) {
 			$this->db = mysqli_connect($this->host, $this->username, $this->password, $this->database);
 		}

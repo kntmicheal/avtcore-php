@@ -59,4 +59,12 @@ class test_io_SqlServerCsvWebServiceTest extends test_io_AbstractCsvWebServiceTe
 				. 'PRIMARY KEY (UUID))');
     }
 
+	/**
+	 * Closes database connection of persistence adapter used in tests
+	 */
+	protected function tearDown() {
+		sqlsrv_close($this->persistenceAdapter->getDatabase());
+		parent::tearDown();
+	}
+
 }

@@ -48,14 +48,23 @@ class avorium_core_persistence_OraclePersistenceAdapter extends avorium_core_per
         $this->password = $password;
         $this->nlslang = $nlslang;
     }
-
+	
 	/**
-	 * Opens a connection to the database and returns it.
-	 * 
-	 * @return object connection to database
+	 * @var object Database connection used in all functions.
 	 */
-    private function getDatabase() {
-        return oci_connect($this->username, $this->password, $this->host, $this->nlslang);
+	private $db = null;
+	
+	/**
+	 * Returns the current database connection resource. Creates a connection
+	 * when none exists.
+	 * 
+	 * @return object Oracle database resource
+	 */
+    public function getDatabase() {
+		if ($this->db === null) {
+			$this->db = oci_connect($this->username, $this->password, $this->host, $this->nlslang);
+		}
+		return $this->db;
     }
 	
 	/**

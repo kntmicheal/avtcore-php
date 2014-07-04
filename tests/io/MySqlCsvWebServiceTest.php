@@ -58,4 +58,11 @@ class test_io_MySqlCsvWebServiceTest extends test_io_AbstractCsvWebServiceTest {
 				. 'PRIMARY KEY (UUID))');
     }
 
+	/**
+	 * Closes database connection of persistence adapter used in tests
+	 */
+	protected function tearDown() {
+		$this->persistenceAdapter->getDatabase()->close();
+		parent::tearDown();
+	}
 }

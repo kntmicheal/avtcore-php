@@ -61,7 +61,7 @@ class avorium_core_persistence_SqlServerPersistenceAdapter extends avorium_core_
 	 * 
 	 * @return object SQL server database resource
 	 */
-    private function getDatabase() {
+    public function getDatabase() {
 		if ($this->db === null) {
 			$this->db = sqlsrv_connect($this->host, array('Database' => $this->database, 'UID' => $this->username, 'PWD' => $this->password));
 		}

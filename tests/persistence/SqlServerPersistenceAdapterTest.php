@@ -74,6 +74,7 @@ extends test_persistence_AbstractPersistenceAdapterTest {
 	 * Closes opened database connections.
 	 */
 	protected function tearDown() {
+		sqlsrv_close($this->persistenceAdapter->getDatabase());
 		sqlsrv_close($this->sqlserver);
 		parent::tearDown();
 	}
