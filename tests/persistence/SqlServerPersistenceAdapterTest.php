@@ -24,49 +24,49 @@
  * THE SOFTWARE.
  */
 
-require_once dirname(__FILE__).'/../../code/avorium/core/persistence/MySqlPersistenceAdapter.php';
+require_once dirname(__FILE__).'/../../code/avorium/core/persistence/SqlServerPersistenceAdapter.php';
 require_once dirname(__FILE__).'/AbstractPersistenceAdapterTest.php';
 
 /**
- * Persistence adapter tests especially for MySQL databases.
+ * Persistence adapter tests especially for MS SQL server databases.
  */
-class test_persistence_MySqlPersistenceAdapterTest 
+class test_persistence_SqlServerPersistenceAdapterTest 
 extends test_persistence_AbstractPersistenceAdapterTest {
 	
     /**
-     * Defines the MySQL persistence adapter to be used and prepares the
+     * Defines the SQL server persistence adapter to be used and prepares the
      * database (cleans tables).
      */
     protected function setUp() {
         parent::setUp();
-		$this->host = $GLOBALS['TEST_MYSQL_DB_HOST'];
-		$this->database = $GLOBALS['TEST_MYSQL_DB_DATABASE'];
-		$this->username = $GLOBALS['TEST_MYSQL_DB_USERNAME']; 
-		$this->password = $GLOBALS['TEST_MYSQL_DB_PASSWORD'];
+		$this->host = $GLOBALS['TEST_SQLSERVER_DB_HOST'];
+		$this->database = $GLOBALS['TEST_SQLSERVER_DB_DATABASE']; 
+		$this->username = $GLOBALS['TEST_SQLSERVER_DB_USERNAME']; 
+		$this->password = $GLOBALS['TEST_SQLSERVER_DB_PASSWORD'];
         $this->persistenceAdapter = 
-            new avorium_core_persistence_MySqlPersistenceAdapter(
-                $this->host, 
-                $this->database, 
+            new avorium_core_persistence_SqlServerPersistenceAdapter(
+                $this->host,
+				$this->database,
                 $this->username, 
                 $this->password
             );
-        $this->mysqli = mysqli_connect(
-            $this->host, 
-            $this->username, 
-            $this->password, 
-            $this->database
-        );
+        $this->sqlserver = sqlsrv_connect(
+				$this->host, array(
+					'Database' => $this->database, 
+					'UID' => $this->username, 
+					'PWD' => $this->password)
+				);
         // Clean database tables by recreating them
-        $this->mysqli->query('drop table POTEST');
-        $this->mysqli->query('CREATE TABLE POTEST ('
+		sqlsrv_query($this->sqlserver, 'drop table POTEST');
+		sqlsrv_query($this->sqlserver, 'CREATE TABLE POTEST ('
 				. 'UUID VARCHAR(40) NOT NULL, '
-				. 'BOOLEAN_VALUE tinyint(1), '
+				. 'BOOLEAN_VALUE tinyint, '
 				. 'INT_VALUE int, '
 				. 'STRING_VALUE varchar(255), '
 				. 'DECIMAL_VALUE decimal(30,10), '
-				. 'DOUBLE_VALUE double, '
-				. 'TEXT_VALUE text(4000), '
-				. 'DATETIME_VALUE datetime, '
+				. 'DOUBLE_VALUE float(53), '
+				. 'TEXT_VALUE text, '
+				. 'DATETIME_VALUE datetime2, '
 				. 'PRIMARY KEY (UUID))');
     }
 	
@@ -74,29 +74,40 @@ extends test_persistence_AbstractPersistenceAdapterTest {
 	 * Closes opened database connections.
 	 */
 	protected function tearDown() {
-		$this->persistenceAdapter->getDatabase()->close();
-		$this->mysqli->close();
+		sqlsrv_close($this->persistenceAdapter->getDatabase());
+		sqlsrv_close($this->sqlserver);
 		parent::tearDown();
 	}
 
 	protected function executeQuery($query) {
-        $resultset = $this->mysqli->query($query);
+        $resultset = sqlsrv_query($this->sqlserver, $query);
         $result = array();
         if ($resultset === true || $resultset === false) {
             return $result;
         } // Can happen with statements which have no result (CREATE TABLE)
-        while ($row = $resultset->fetch_array()) {
+        while ($row = sqlsrv_fetch_array($resultset)) {
+			// Convert cell values into strings
+			foreach ($row as $key => $value) {
+				if (is_a($value, 'DateTime')) {
+					$row[$key] = $value->format('Y-m-d H:i:s');
+				} elseif (is_bool($value)) {
+					$row[$key] = $value ? '1' : '0';
+				} elseif (!is_string($value)) {
+					// Numeric and so on
+					$row[$key] = ''.$value;
+				}
+			}
             $result[] = $row;
         }
         return $result;
     }
 
     protected function escape($string) {
-        return mysqli_real_escape_string($this->mysqli, $string);
+		return str_replace('\'', '\'\'', $string);
     }
 
     protected function getErrornousPersistenceAdapter() {
-        return new avorium_core_persistence_MySqlPersistenceAdapter(
+        return new avorium_core_persistence_SqlServerPersistenceAdapter(
             'wronghost', 
             'wrongdatabase', 
             'wrongusername', 

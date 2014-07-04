@@ -11,6 +11,10 @@
 		<var name="TEST_ORACLE_DB_USERNAME" value="avtcoretest" />
 		<var name="TEST_ORACLE_DB_PASSWORD" value="avtcoretest" />
 		<var name="TEST_ORALCE_NLS_LANG" value="AL32UTF8" />
+		<var name="TEST_SQLSERVER_DB_HOST" value="3DDRUCKER\SQLEXPRESS" />
+		<var name="TEST_SQLSERVER_DB_DATABASE" value="avtcoretest" />
+		<var name="TEST_SQLSERVER_DB_USERNAME" value="avtcoretest" />
+		<var name="TEST_SQLSERVER_DB_PASSWORD" value="avtcoretest" />
 		<var name="TEST_WEBSERVER" value="localhost:8888" />
 	</php>
 	<testsuites>

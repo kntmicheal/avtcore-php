@@ -49,26 +49,20 @@ class test_io_MySqlCsvWebServiceTest extends test_io_AbstractCsvWebServiceTest {
                 $this->username, 
                 $this->password
             );
-        $this->mysqli = mysqli_connect(
-            $this->host, 
-            $this->username, 
-            $this->password, 
-            $this->database
-        );
         // Clean database tables by recreating them
-        $this->mysqli->query('drop table POTEST');
-        $this->mysqli->query('CREATE TABLE POTEST ('
+        $this->persistenceAdapter->executeNoResultQuery('drop table POTEST');
+        $this->persistenceAdapter->executeNoResultQuery('CREATE TABLE POTEST ('
 				. 'UUID VARCHAR(40) NOT NULL, '
-				. 'STRING_VALUE_1 varchar(255), '
-				. 'STRING_VALUE_2 varchar(255), '
+				. 'STRING_VALUE_1 VARCHAR(255), '
+				. 'STRING_VALUE_2 VARCHAR(255), '
 				. 'PRIMARY KEY (UUID))');
     }
-	
+
 	/**
-	 * Closes opened database connections.
+	 * Closes database connection of persistence adapter used in tests
 	 */
 	protected function tearDown() {
-		$this->mysqli->close();
+		$this->persistenceAdapter->getDatabase()->close();
 		parent::tearDown();
 	}
 }

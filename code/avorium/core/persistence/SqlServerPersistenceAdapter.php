@@ -28,14 +28,17 @@ require_once dirname(__FILE__).'/AbstractPersistenceAdapter.php';
 require_once dirname(__FILE__).'/PersistentObject.php';
 
 /**
- * Concrete adapter for MySQL databases
+ * Concrete adapter for MS SQL server databases. The PHP driver can be found at
+ * http://www.microsoft.com/en-us/download/details.aspx?id=20098 (up to PHP 5.4)
+ * http://sqlsrvphp.codeplex.com/discussions/441706 or http://www.hmelihkara.com/files/php_sqlsrv_55.rar (PHP 5.5)
  */
-class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_persistence_AbstractPersistenceAdapter {
+class avorium_core_persistence_SqlServerPersistenceAdapter extends avorium_core_persistence_AbstractPersistenceAdapter {
     
     /**
-     * Creates a MySQL database adapter using the given database credentials.
-     * Currently only connecting to MySQL on default port (3306) is supported.
-     * @param string $host Hostname or IP address of thy MySQL database server
+     * Creates a MS SQL server database adapter using the given database 
+	 * credentials.
+     * @param string $host Hostname or IP address including the catalog
+	 * of thy SQL server database server (e.g. "localhost/SQLEXPRESS")
      * @param string $database Name of the database
      * @param string $username Username for the database
      * @param string $password Password as clear text
@@ -56,65 +59,65 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
 	 * Returns the current database connection resource. Creates a connection
 	 * when none exists.
 	 * 
-	 * @return object MySQL database resource
+	 * @return object SQL server database resource
 	 */
     public function getDatabase() {
 		if ($this->db === null) {
-			$this->db = mysqli_connect($this->host, $this->username, $this->password, $this->database);
+			$this->db = sqlsrv_connect($this->host, array('Database' => $this->database, 'UID' => $this->username, 'PWD' => $this->password));
 		}
 		return $this->db;
     }
 
 	/**
-	 * Escapes the given string for using it in an SQL statement.
-	 * 
-	 * @param string $string String to escape
-	 * @return string Escaped string
+	 * Escapes the given string that it can be used in MSSQL SQL statements
+	 * by replacing the single quote character.
 	 */
-    private function escape($string) {
-        return mysqli_real_escape_string($this->getDatabase(), $string);
-    }
+	private function escape($string) {
+		return str_replace('\'', '\'\'', $string);
+	}
 
     public function save(avorium_core_persistence_PersistentObject $persistentObject) {
         $metaData = avorium_core_persistence_helper_Annotation::getPersistableMetaData($persistentObject);
         $tableName = $this->escapeTableOrColumnName($persistentObject->tablename);
-        $inserts = array();
-        $values = array();
+        $selects = array();
+        $insertcolumns = array();
+		$insertvalues = array();
         $updates = array();
         foreach ($metaData['properties'] as $key => $definition) {
             $name = $this->escapeTableOrColumnName($definition['name']);
             if ($persistentObject->$key === null) { // Null-values are transferred to database as they are
-                $inserts[] = $name;
-                $values[] = 'NULL';
+				$selects[] = 'NULL '.$name;
             } else {
-                $value = $this->escape($persistentObject->$key);
-                $inserts[] = $name;
+                $value = $persistentObject->$key;
 				if (!isset($definition['type'])) {
 					throw new Exception('Type of persistent object property not set.');
 				}
                 switch($definition['type']) {
                     case 'bool':
-                        $values[] = $value ? 1 : 0;
+                        $selects[] = ($value ? 1 : 0).' AS '.$name;
                         break;
                     case 'int':
-                        $values[] = $value;
+                        $selects[] = ((int)$value).' AS '.$name;
                         break;
                     case 'string':
                         // Prevent storing overlong strings into database when MySQL server is not in strict mode
                         if (isset($definition['size']) && (int)$definition['size'] < strlen($value)) {
                             throw new Exception('The string to be inserted is too long for the column.');
                         }
-                        $values[] = '\''.$value.'\'';
+                        $selects[] = '\''.$this->escape($value).'\' AS '.$name;
                         break;
                     default: // Unknown data types cannot be handled correctly
                         throw new Exception('Database column type \''.$definition['type'].'\' is not known to the persistence adapter.');
                 }
             }
-            if ($name !== 'UUID') {
-                $updates[] = $name.'=VALUES('.$name.')';
-            }
+			$insertcolumns[] = $name;
+			$insertvalues[] = 'S.'.$name;
+			if ($name !== 'UUID') {
+				$updates[] = $name.'=S.'.$name;
+			}
         }
-        $query = 'INSERT INTO '.$tableName.' ('.implode(',', $inserts).') VALUES ('.implode(',', $values).') ON DUPLICATE KEY UPDATE '.implode(',', $updates);
+		// See http://www.sergeyv.com/blog/archive/2010/09/10/sql-server-upsert-equivalent.aspx
+		$query = 'MERGE INTO '.$tableName.' USING (SELECT '.implode(',', $selects).') AS S ON ('.$tableName.'.UUID = S.UUID) WHEN MATCHED THEN UPDATE SET '.implode(',', $updates).' WHEN NOT MATCHED THEN INSERT ('.implode(',', $insertcolumns).') VALUES ('.implode(',', $insertvalues).');';
         $this->executeNoResultQuery($query);
     }
 
@@ -135,29 +138,29 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
     }
 
     private function updateTable($propertiesMetaData, $tableName) {
-        $existingcolumns = $this->executeMultipleResultQuery('SHOW COLUMNS FROM '.$tableName);
+		// From http://stackoverflow.com/a/2418665
+        $existingcolumns = $this->executeMultipleResultQuery('select COLUMN_NAME, DATA_TYPE from INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME=\''.$tableName.'\'');
         $newcolumns = array();
         foreach ($propertiesMetaData as $definition) {
             $columnfound = false;
             $columntype = $this->getDatabaseType($definition['type']);
             $columnsize = isset($definition['size']) ? '('.$definition['size'].')' : '';
             foreach ($existingcolumns as $existingcolumn) {
-                if ($existingcolumn->Field === $definition['name']) {
+                if ($existingcolumn->COLUMN_NAME === $definition['name']) {
                     $columnfound = true;
                     // Check whether to try to change the type. This may be a data consistency risk
-                    $existingcolumntype = substr($existingcolumn->Type, 0, strpos($existingcolumn->Type, '('));
-                    if (strtolower($existingcolumntype) !== strtolower($columntype)) {
+                    if (strtolower($existingcolumn->DATA_TYPE) !== strtolower($columntype)) {
                         throw new Exception('Changing the column type is not supported.');
                     }
                     break;
                 }
             }
             if (!$columnfound) {
-                $newcolumns[] = ' ADD COLUMN '.$definition['name'].' '.$columntype.$columnsize;
+                $newcolumns[] = $definition['name'].' '.$columntype.$columnsize;
             }
         }
         if (count($newcolumns) > 0) {
-            $query = 'ALTER TABLE '.$tableName.implode(',', $newcolumns);
+            $query = 'ALTER TABLE '.$tableName.' ADD '.implode(',', $newcolumns);
             $this->executeNoResultQuery($query);
         }
     }
@@ -166,7 +169,7 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
         $metaData = avorium_core_persistence_helper_Annotation::getPersistableMetaData($persistentobjectclass);
         $tableName = $this->escapeTableOrColumnName($metaData['name']);
         // Erst mal gucken, ob die Tabelle existiert
-        if (count($this->executeMultipleResultQuery('show tables like \''.$tableName.'\'')) < 1) {
+        if (count($this->executeMultipleResultQuery('SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = \''.$tableName.'\'')) < 1) {
             // Tabelle existiert noch nicht, also anlegen
             $this->createTable($metaData['properties'], $tableName);
         } else {
@@ -209,34 +212,34 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
     }
 
     public function executeMultipleResultQuery($query, $persistentobjectclass = null) {
-        $resultset = $this->getDatabase()->query($query);
-        if ($resultset === true) { // Query did not return any result because it was a no result query
+        $resultset = sqlsrv_query($this->getDatabase(), $query);
+        if ($resultset !== false && (sqlsrv_field_metadata($resultset) === false || sqlsrv_num_fields($resultset) < 1)) { // Query did not return any result because it was a no result query
             throw new Exception('Multiple result statement seems to be a no result statement.');
         }
-        if (!is_object($resultset)) {
+        if ($resultset === false) { // Error in SQL query
             throw new Exception('Error in query: '.$query);
         }
         $result = array();
-        while ($row = $resultset->fetch_object()) {
+        while ($row = sqlsrv_fetch_object($resultset)) {
             $result[] = $persistentobjectclass !== null ? $this->cast($row, $persistentobjectclass) : $row;
         }
         return $result;
     }
 
 	public function executeSingleResultQuery($query, $persistentobjectclass = null) {
-        $resultset = $this->getDatabase()->query($query);
-        if ($resultset === true) { // Query did not return any result because it was a no result query
+        $resultset = sqlsrv_query($this->getDatabase(), $query);
+        if ($resultset !== false && (sqlsrv_field_metadata($resultset) === false || sqlsrv_num_fields($resultset) < 1)) { // Query did not return any result because it was a no result query
             throw new Exception('Single result statement seems to be a no result statement.');
         }
-        if (!is_object($resultset)) { // Error in SQL query
+        if ($resultset === false) { // Error in SQL query
             throw new Exception('Error in query: '.$query);
         }
-        $row = $resultset->fetch_object();
+        $row = sqlsrv_fetch_object($resultset);
         if (is_null($row)) {
             return null;
         }
         // Check for further results, this seems to be a semantic error
-        if ($resultset->fetch_object()) {
+        if (sqlsrv_fetch_object($resultset)) {
             throw new Exception('Single result statement returned more than one result.');
         }
         $result = $persistentobjectclass !== null ? $this->cast($row, $persistentobjectclass) : $row;
@@ -244,11 +247,11 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
 	}
 
 	public function executeNoResultQuery($query) {
-        $resultset = $this->getDatabase()->query($query);
-        if (!$resultset) { // When false is returned, the query was not successful
+        $resultset = sqlsrv_query($this->getDatabase(), $query);
+        if ($resultset === false) { // When false is returned, the query was not successful
             throw new Exception('Error in query: '.$query);
         }
-        if ($resultset !== true) { // When not true (but an object is returned, the query was of wrong type
+        if (sqlsrv_has_rows($resultset)) { // When not empty the query was of wrong type
             throw new Exception('No result statement returned a result.');
         }
 	}
@@ -290,26 +293,38 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
 		if (is_null($query)) {
 			throw new Exception('The query must not be null.');
 		}		
-		$resultset = $this->getDatabase()->query($query);
-        if ($resultset === true) { // Query did not return any result because it was a no result query
+        $resultset = sqlsrv_query($this->getDatabase(), $query, array(), array( "Scrollable" => SQLSRV_CURSOR_KEYSET )); // Parameter needed to make sqlserv_num_rows work
+        if ($resultset !== false && (sqlsrv_field_metadata($resultset) === false || sqlsrv_num_fields($resultset) < 1)) { // Query did not return any result because it was a no result query
             throw new Exception('Multiple result statement seems to be a no result statement.');
         }
-        if (!is_object($resultset)) {
+        if ($resultset === false) {
             throw new Exception('Error in query: '.$query);
         }
 		// Prepare datatable
-		$columncount = $resultset->field_count;
-		$rowcount = $resultset->num_rows;
+		$columncount = sqlsrv_num_fields($resultset);
+		$rowcount = sqlsrv_num_rows($resultset);
 		$datatable = new avorium_core_data_DataTable($rowcount, $columncount);
 		// Extract header names even if the resultset is empty
+		$metadata = sqlsrv_field_metadata(sqlsrv_prepare($this->getDatabase(), $query)); // http://msdn.microsoft.com/en-us/library/cc296197.aspx
 		for ($i = 0; $i < $columncount; $i++) {
-			$datatable->setHeader($i, $resultset->fetch_field_direct($i)->name);
+			$datatable->setHeader($i, $metadata[$i]['Name']);
 		}
 		// Fill datatable cells
 		$rownum = 0;
-        while ($row = $resultset->fetch_row()) {
+        while ($row = sqlsrv_fetch_array($resultset)) {
 			for ($i = 0; $i < $columncount; $i++) {
-				$datatable->setCellValue($rownum, $i, $row[$i]);
+				// Here we need datatype conversions because the database does not return strings
+				$value = $row[$i];
+				if (is_string($value)) {
+					$datatable->setCellValue($rownum, $i, $value);
+				} elseif (is_a($value, 'DateTime')) {
+					$datatable->setCellValue($rownum, $i, $value->format('Y-m-d H:i:s'));
+				} elseif (is_bool($value)) {
+					$datatable->setCellValue($rownum, $i, $value ? '1' : '0');
+				} else {
+					// Numeric and so on
+					$datatable->setCellValue($rownum, $i, ''.$value);
+				}
 			}
 			$rownum++;
         }
@@ -333,24 +348,24 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
 		// Process data table
 		$escapedtablename = $this->escapeTableOrColumnName($tablename);
 		$headernames = $datatable->getHeaders();
+		$escapedheadernames = array();
 		$columncount = count($headernames);
 		$datamatrix = $datatable->getDataMatrix();
 		// Ignore empty datatables
 		if (count($datamatrix) < 1) {
 			return;
 		}
-        $inserts = array();
-        $values = array();
+        $selects = array();
+        $insertcolumns = array();
+		$insertvalues = array();
         $updates = array();
 		// Obtain primary key from database
-		try {
-			$primarykeys = $this->executeMultipleResultQuery('SHOW KEYS FROM '.$escapedtablename.' WHERE KEY_NAME = \'PRIMARY\'');
-		} catch (Exception $ex) {
-			// Happens when the table name is invalid
-			throw new Exception('Invalid table name given: '.$tablename, null, $ex);
+		$primarykeys = $this->executeMultipleResultQuery('select COLUMN_NAME from INFORMATION_SCHEMA.KEY_COLUMN_USAGE where OBJECTPROPERTY(OBJECT_ID(constraint_name), \'IsPrimaryKey\') = 1 and TABLE_NAME=\''.$escapedtablename.'\'');
+		if (count($primarykeys) < 1) {
+			throw new Exception('Invalid table name given: '.$tablename);
 		}
 		// Currently only one primary key is supported, get its column name
-		$primarykeycolumnname = $primarykeys[0]->Column_name;
+		$primarykeycolumnname = $primarykeys[0]->COLUMN_NAME;
 		$primarykeycolumnfound = false;
 		foreach ($headernames as $headername) {
 			if ($headername === null) {
@@ -360,9 +375,11 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
 			if (strlen($escapedheadername) < 1) {
 				throw new Exception('The header name is empty but must not be.');
 			}
-			$inserts[] = $escapedheadername;
+			$escapedheadernames[] = $escapedheadername;
+			$insertcolumns[] = $escapedheadername;
+			$insertvalues[] = 'S.'.$escapedheadername;
 			if ($escapedheadername !== $primarykeycolumnname) {
-                $updates[] = $escapedheadername.'=VALUES('.$escapedheadername.')';
+				$updates[] = $escapedheadername.'=S.'.$escapedheadername;
 			} else {
 				$primarykeycolumnfound = true;
 			}
@@ -371,31 +388,25 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
 			throw new Exception('Expected primary key column '.$primarykeycolumnname.' not found.');
 		}
 		foreach ($datamatrix as $row) {
-			$rowvalues = array();
+			$rowselects = array();
 			for ($i = 0; $i < $columncount; $i++) {
 				// Distinguish between data types
 				if (is_null($row[$i])) {
-					$rowvalues[] = 'NULL';
+					$rowselects[] = 'NULL AS '.$escapedheadernames[$i];
 				} else if (is_bool($row[$i])) {
-					$rowvalues[] = $row[$i] ? 1 : 0;
+					$rowselects[] = ($row[$i] ? 1 : 0).' AS '.$escapedheadernames[$i];
 				} else if (is_numeric($row[$i])) {
-					$rowvalues[] = $row[$i];
+					$rowselects[] = $row[$i].' AS '.$escapedheadernames[$i];
 				} else if (is_string($row[$i])) {
-					$rowvalues[] = '\''.$this->escape($row[$i]).'\'';
+					$rowselects[] = '\''.$this->escape($row[$i]).'\' AS '.$escapedheadernames[$i];
 				} else {
 					throw new Exception('Unknown datatype: '.gettype($row[$i]));
 				}
 			}
-			$values[] = '('.implode(',', $rowvalues).')';
+			$selects[] = 'SELECT '.implode(',', $rowselects);
 		}
-        $query = 'INSERT INTO '.$escapedtablename.' ('.implode(',', $inserts).') VALUES '.implode(',', $values).' ON DUPLICATE KEY UPDATE '.implode(',', $updates);
-        $resultset = $this->getDatabase()->query($query);
-        if (!$resultset) { // When false is returned, the query was not successful
-            throw new Exception('Error in query: '.$query);
-        }
-        if (mysqli_warning_count($this->getDatabase()) > 0) {
-			throw new Exception('Error saving to database. Maybe a given string value cannot be parsed into the correct data type');
-		}
+		$query = 'MERGE INTO '.$escapedtablename.' AS T USING ('.implode(' UNION ALL ', $selects).') AS S ON (T.UUID = S.UUID) WHEN MATCHED THEN UPDATE SET '.implode(',', $updates).' WHEN NOT MATCHED THEN INSERT ('.implode(',', $insertcolumns).') VALUES ('.implode(',', $insertvalues).');';
+        $this->executeNoResultQuery($query);
 	}
 
 }

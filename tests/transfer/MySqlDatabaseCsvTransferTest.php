@@ -69,5 +69,13 @@ class test_remote_MySqlDatabaseCsvTransferTest extends test_remote_AbstractDatab
 				. 'PRIMARY KEY (UUID))');
     }
 
+	/**
+	 * Closes database connection of persistence adapter used in tests
+	 */
+	protected function tearDown() {
+		$this->persistenceAdapter->getDatabase()->close();
+		parent::tearDown();
+	}
+
 	// All test cases are defined in the abstract base class
 }

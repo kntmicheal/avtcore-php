@@ -1527,7 +1527,7 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
 		$resultwithnullvaluesignoring = $this->executeQuery('select UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE from POTEST order by UUID');
 		$this->assertEquals(5, count($resultwithnullvaluesignoring), 'Wrong row count');
 		$this->assertEquals($nullvaluerecord['UUID'], $resultwithnullvaluesignoring[4]['UUID'], 'UUID from database is not as expected.');
-		$this->assertEquals($nullvaluerecord['bool']?1:0, $resultwithnullvaluesignoring[4]['BOOLEAN_VALUE'], 'Boolean value from database is not as expected.');
+		$this->assertEquals($nullvaluerecord['bool'], $resultwithnullvaluesignoring[4]['BOOLEAN_VALUE'], 'Boolean value from database is not as expected.');
 		$this->assertEquals($nullvaluerecord['int'], $resultwithnullvaluesignoring[4]['INT_VALUE'], 'Integer value from database is not as expected.');
 		$this->assertEquals($nullvaluerecord['string'], $resultwithnullvaluesignoring[4]['STRING_VALUE'], 'String value from database is not as expected.');
 	}
@@ -1769,14 +1769,14 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
 	/**
 	 * Tests the correct conversion of double datatypes into strings when
 	 * reading from database and putting the data into a datatable.
-	 * Results must be in the format (uppercase "E") "-2.22507485850719E-30" 
+	 * Results must be in the format (uppercase "E") "-2.2250748585072E-30" 
 	 * to "1.79769313486230E+308"
 	 */
 	public function testGetDataTableDoubleDataType() {
 		// Insert border values into database
-		$minposvalue = '2.22507485850719E-308';
+		$minposvalue = '2.2250748585072E-308';
 		$maxposvalue = '1.79769313486230E308';
-		$minnegvalue = '-2.22507485850719E-308';
+		$minnegvalue = '-2.2250748585072E-308';
 		$maxnegvalue = '-1.79769313486230E308';
 		$this->executeQuery('insert into POTEST (UUID, DOUBLE_VALUE) values (\'testuuid0\','.$minposvalue.')');
 		$this->executeQuery('insert into POTEST (UUID, DOUBLE_VALUE) values (\'testuuid1\','.$maxposvalue.')');
@@ -1932,13 +1932,13 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
 	/**
 	 * Tests the correct conversion of strings into double datatypes when
 	 * writing to database.
-	 * Input is in the format (uppercase "E") "-2.22507485850719E-30" 
+	 * Input is in the format (uppercase "E") "-2.2250748585072E-30" 
 	 * to "1.79769313486230E+308"
 	 */
 	public function testSaveDataTableDoubleDataType() {
-		$minposvalue = '2.22507485850719E-308';
+		$minposvalue = '2.2250748585072E-308';
 		$maxposvalue = '1.79769313486230E308';
-		$minnegvalue = '-2.22507485850719E-308';
+		$minnegvalue = '-2.2250748585072E-308';
 		$maxnegvalue = '-1.79769313486230E308';
 		// Store datatable
 		$datatable = new avorium_core_data_DataTable(4, 2);

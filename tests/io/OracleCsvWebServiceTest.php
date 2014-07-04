@@ -49,26 +49,21 @@ class test_io_OracleCsvWebServiceTest extends test_io_AbstractCsvWebServiceTest 
                 $this->password,
                 $this->nlslang
             );
-        $this->oci = oci_connect(
-            $this->username, 
-            $this->password,
-            $this->host,
-            $this->nlslang
-        );
         // Clean database tables by recreating them
-        oci_execute(oci_parse($this->oci, 'BEGIN  EXECUTE IMMEDIATE \'DROP TABLE POTEST\'; EXCEPTION WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF; END;'));
-        oci_execute(oci_parse($this->oci, 'CREATE TABLE POTEST ('
+        $this->persistenceAdapter->executeNoResultQuery('BEGIN  EXECUTE IMMEDIATE \'DROP TABLE POTEST\'; EXCEPTION WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF; END;');
+        $this->persistenceAdapter->executeNoResultQuery('CREATE TABLE POTEST ('
 				. 'UUID NVARCHAR2(40) NOT NULL, '
 				. 'STRING_VALUE_1 NVARCHAR2(255), '
 				. 'STRING_VALUE_2 NVARCHAR2(255), '
-				. 'PRIMARY KEY (UUID))'));
+				. 'PRIMARY KEY (UUID))');
     }
-	
+
 	/**
-	 * Closes opened database connections.
+	 * Closes database connection of persistence adapter used in tests
 	 */
 	protected function tearDown() {
-		oci_close($this->oci);
+		oci_close($this->persistenceAdapter->getDatabase());
 		parent::tearDown();
 	}
+
 }
