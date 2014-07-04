@@ -6,4 +6,11 @@ Because we wanted to setup such projects in a couple of minutes and we did not w
 
 Here you have a small and extensible framework which is easy to understand and to get started, even if you are new to PHP programming.
 
+The currently implemented features are:
+
+1. Datatable structure to represent a database table in code
+2. Persistence layer which can handle MySQL and Oracle databases and easily can process datatables
+3. CSV converter for generating CSV content from datatables and vice versa
+4. CSV webservice to transfer database content over the net, supports pushing database content to remote host and querying content via SQL statements from the remote server
+
 <a href="http://avtnet.avorium.de:8111/viewType.html?buildTypeId=bt28&guest=1"><img src="http://avtnet.avorium.de:8111/app/rest/builds/buildType:(id:bt28)/statusIcon"/></a>

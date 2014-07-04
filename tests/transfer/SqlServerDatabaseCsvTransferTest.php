@@ -1,7 +1,7 @@
 <?php
 
-/* 
-public function The MIT License
+/*
+ * The MIT License
  *
  * Copyright 2014 Ronny Hildebrandt <ronny.hildebrandt@avorium.de>.
  *
@@ -24,28 +24,40 @@ public function The MIT License
  * THE SOFTWARE.
  */
 
-require_once dirname(__FILE__).'/../../code/avorium/core/persistence/MySqlPersistenceAdapter.php';
-require_once dirname(__FILE__).'/AbstractCsvWebServiceTest.php';
+require_once dirname(__FILE__).'/../../code/avorium/core/persistence/SqlServerPersistenceAdapter.php';
+require_once dirname(__FILE__).'/AbstractDatabaseCsvTransferTest.php';
 
 /**
- * Tests the functionality of the CsvWebService class for MySQL databases.
+ * Tests the transfer of database tables from a server with the help of transfer
+ * functions based on MS SQL server database on the remote host.
  */
-class test_io_MySqlCsvWebServiceTest extends test_io_AbstractCsvWebServiceTest {
+class test_remote_SqlServerDatabaseCsvTransferTest extends test_remote_AbstractDatabaseCsvTransferTest {
 	
+	protected $serverhandle;
+	protected $serverpipes;
+	protected $serverpid;
+	
+	protected function prepareLocalConfigFile($filename) {
+		$config = "<?php\n"
+				."require_once dirname(__FILE__).'/code/avorium/core/persistence/SqlServerPersistenceAdapter.php';\n"
+				.'$GLOBALS[\'PersistenceAdapter\'] = new avorium_core_persistence_SqlServerPersistenceAdapter(\''.$GLOBALS['TEST_SQLSERVER_DB_HOST'].'\', \''.$GLOBALS['TEST_SQLSERVER_DB_DATABASE'].'\', \''.$GLOBALS['TEST_SQLSERVER_DB_USERNAME'].'\', \''.$GLOBALS['TEST_SQLSERVER_DB_PASSWORD'].'\');';
+		file_put_contents($filename, $config);
+	}
+		
     /**
      * Defines the MySQL persistence adapter to be used and prepares the
      * database (cleans tables).
      */
     protected function setUp() {
         parent::setUp();
-		$this->host = $GLOBALS['TEST_MYSQL_DB_HOST'];
-		$this->database = $GLOBALS['TEST_MYSQL_DB_DATABASE'];
-		$this->username = $GLOBALS['TEST_MYSQL_DB_USERNAME']; 
-		$this->password = $GLOBALS['TEST_MYSQL_DB_PASSWORD'];
+		$this->host = $GLOBALS['TEST_SQLSERVER_DB_HOST'];
+		$this->database = $GLOBALS['TEST_SQLSERVER_DB_DATABASE']; 
+		$this->username = $GLOBALS['TEST_SQLSERVER_DB_USERNAME']; 
+		$this->password = $GLOBALS['TEST_SQLSERVER_DB_PASSWORD'];
         $this->persistenceAdapter = 
-            new avorium_core_persistence_MySqlPersistenceAdapter(
-                $this->host, 
-                $this->database, 
+            new avorium_core_persistence_SqlServerPersistenceAdapter(
+                $this->host,
+				$this->database,
                 $this->username, 
                 $this->password
             );
@@ -53,9 +65,9 @@ class test_io_MySqlCsvWebServiceTest extends test_io_AbstractCsvWebServiceTest {
         $this->persistenceAdapter->executeNoResultQuery('drop table POTEST');
         $this->persistenceAdapter->executeNoResultQuery('CREATE TABLE POTEST ('
 				. 'UUID VARCHAR(40) NOT NULL, '
-				. 'STRING_VALUE_1 VARCHAR(255), '
-				. 'STRING_VALUE_2 VARCHAR(255), '
+				. 'STRING_VALUE VARCHAR(255), '
 				. 'PRIMARY KEY (UUID))');
     }
 
+	// All test cases are defined in the abstract base class
 }

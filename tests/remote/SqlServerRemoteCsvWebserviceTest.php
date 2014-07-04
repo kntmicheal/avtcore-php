@@ -1,7 +1,7 @@
 <?php
 
-/* 
-public function The MIT License
+/*
+ * The MIT License
  *
  * Copyright 2014 Ronny Hildebrandt <ronny.hildebrandt@avorium.de>.
  *
@@ -24,38 +24,50 @@ public function The MIT License
  * THE SOFTWARE.
  */
 
-require_once dirname(__FILE__).'/../../code/avorium/core/persistence/OraclePersistenceAdapter.php';
-require_once dirname(__FILE__).'/AbstractCsvWebServiceTest.php';
+require_once dirname(__FILE__).'/../../code/avorium/core/persistence/SqlServerPersistenceAdapter.php';
+require_once dirname(__FILE__).'/AbstractRemoteCsvWebserviceTest.php';
 
 /**
- * Tests the functionality of the CsvWebService class for Oracle databases.
+ * Tests the transfer of CSV data from and to a server which is connected to
+ * a MS SQL server database.
  */
-class test_io_OracleCsvWebServiceTest extends test_io_AbstractCsvWebServiceTest {
+class test_remote_SqlServerRemoteCsvWebserviceTest extends test_remote_AbstractRemoteCsvWebserviceTest {
 	
+	protected $serverhandle;
+	protected $serverpipes;
+	protected $serverpid;
+	
+	protected function prepareLocalConfigFile($filename) {
+		$config = "<?php\n"
+				."require_once dirname(__FILE__).'/code/avorium/core/persistence/SqlServerPersistenceAdapter.php';\n"
+				.'$GLOBALS[\'PersistenceAdapter\'] = new avorium_core_persistence_SqlServerPersistenceAdapter(\''.$GLOBALS['TEST_SQLSERVER_DB_HOST'].'\', \''.$GLOBALS['TEST_SQLSERVER_DB_DATABASE'].'\', \''.$GLOBALS['TEST_SQLSERVER_DB_USERNAME'].'\', \''.$GLOBALS['TEST_SQLSERVER_DB_PASSWORD'].'\');';
+		file_put_contents($filename, $config);
+	}
+		
     /**
      * Defines the MySQL persistence adapter to be used and prepares the
      * database (cleans tables).
      */
     protected function setUp() {
         parent::setUp();
-		$this->host = $GLOBALS['TEST_ORACLE_DB_HOST'];
-		$this->username = $GLOBALS['TEST_ORACLE_DB_USERNAME']; 
-		$this->password = $GLOBALS['TEST_ORACLE_DB_PASSWORD'];
-                $this->nlslang= $GLOBALS['TEST_ORALCE_NLS_LANG'];
+		$this->host = $GLOBALS['TEST_SQLSERVER_DB_HOST'];
+		$this->database = $GLOBALS['TEST_SQLSERVER_DB_DATABASE']; 
+		$this->username = $GLOBALS['TEST_SQLSERVER_DB_USERNAME']; 
+		$this->password = $GLOBALS['TEST_SQLSERVER_DB_PASSWORD'];
         $this->persistenceAdapter = 
-            new avorium_core_persistence_OraclePersistenceAdapter(
+            new avorium_core_persistence_SqlServerPersistenceAdapter(
                 $this->host, 
+				$this->database,
                 $this->username, 
-                $this->password,
-                $this->nlslang
+                $this->password
             );
         // Clean database tables by recreating them
-        $this->persistenceAdapter->executeNoResultQuery('BEGIN  EXECUTE IMMEDIATE \'DROP TABLE POTEST\'; EXCEPTION WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF; END;');
+        $this->persistenceAdapter->executeNoResultQuery('drop table POTEST');
         $this->persistenceAdapter->executeNoResultQuery('CREATE TABLE POTEST ('
-				. 'UUID NVARCHAR2(40) NOT NULL, '
-				. 'STRING_VALUE_1 NVARCHAR2(255), '
-				. 'STRING_VALUE_2 NVARCHAR2(255), '
+				. 'UUID VARCHAR(40) NOT NULL, '
+				. 'STRING_VALUE VARCHAR(255), '
 				. 'PRIMARY KEY (UUID))');
     }
 
+	// All test cases are defined in the abstract base class
 }
