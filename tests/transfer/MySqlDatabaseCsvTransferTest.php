@@ -33,10 +33,6 @@ require_once dirname(__FILE__).'/AbstractDatabaseCsvTransferTest.php';
  */
 class test_remote_MySqlDatabaseCsvTransferTest extends test_remote_AbstractDatabaseCsvTransferTest {
 	
-	protected $serverhandle;
-	protected $serverpipes;
-	protected $serverpid;
-	
 	protected function prepareLocalConfigFile($filename) {
 		$config = "<?php\n"
 				."require_once dirname(__FILE__).'/code/avorium/core/persistence/MySqlPersistenceAdapter.php';\n"
