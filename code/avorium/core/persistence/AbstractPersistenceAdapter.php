@@ -24,6 +24,8 @@
  * THE SOFTWARE.
  */
 
+require_once dirname(__FILE__).'/../data/DataTable.php';
+
 /**
  * Base class for all database adapters.
  */

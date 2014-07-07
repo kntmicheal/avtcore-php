@@ -165,12 +165,12 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
     public function updateOrCreateTable($persistentobjectclass) {
         $metaData = avorium_core_persistence_helper_Annotation::getPersistableMetaData($persistentobjectclass);
         $tableName = $this->escapeTableOrColumnName($metaData['name']);
-        // Erst mal gucken, ob die Tabelle existiert
+        // Check whether the table exists
         if (count($this->executeMultipleResultQuery('show tables like \''.$tableName.'\'')) < 1) {
-            // Tabelle existiert noch nicht, also anlegen
+            // Table does not exist, create it from scratch
             $this->createTable($metaData['properties'], $tableName);
         } else {
-            // Tabelle existiert, Spalten auf Vorhandensein prüfen
+            // Table exists, append new columns
             $this->updateTable($metaData['properties'], $tableName);
         }
     }

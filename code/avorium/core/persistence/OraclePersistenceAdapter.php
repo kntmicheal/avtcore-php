@@ -212,14 +212,14 @@ class avorium_core_persistence_OraclePersistenceAdapter extends avorium_core_per
 	public function updateOrCreateTable($persistentobjectclass) {
         $metaData = avorium_core_persistence_helper_Annotation::getPersistableMetaData($persistentobjectclass);
         $tableName = $this->escapeTableOrColumnName(strtoupper($metaData['name']));
-        // Erst mal gucken, ob die Tabelle existiert
+        // Check whether the table exists
 		$query = 'SELECT * FROM USER_TABLES WHERE UPPER(TABLE_NAME)=\''.$tableName.'\'';
 		$result = $this->executeMultipleResultQuery($query);
         if (count($result) < 1) {
-            // Tabelle existiert noch nicht, also anlegen
+            // Table does not exist, create it from scratch
             $this->createTable($metaData['properties'], $tableName);
         } else {
-            // Tabelle existiert, Spalten auf Vorhandensein prüfen
+            // Table exists, append new columns
             $this->updateTable($metaData['properties'], $tableName);
         }
 	}
@@ -428,7 +428,7 @@ class avorium_core_persistence_OraclePersistenceAdapter extends avorium_core_per
 			}
 			$selects[] = 'SELECT '.implode(',', $rowselects).' FROM DUAL';
 		}
-		$query = 'MERGE INTO '.$escapedtablename.' T USING ('.implode(' UNION ALL ', $selects).') S ON (T.UUID = S.UUID) WHEN MATCHED THEN UPDATE SET '.implode(',', $updates).' WHEN NOT MATCHED THEN INSERT ('.implode(',', $insertcolumns).') VALUES ('.implode(',', $insertvalues).')';
+		$query = 'MERGE INTO '.$escapedtablename.' T USING ('.implode(' UNION ALL ', $selects).') S ON (T.'.$primarykeycolumnname.' = S.'.$primarykeycolumnname.') WHEN MATCHED THEN UPDATE SET '.implode(',', $updates).' WHEN NOT MATCHED THEN INSERT ('.implode(',', $insertcolumns).') VALUES ('.implode(',', $insertvalues).')';
         $this->executeNoResultQuery($query);
 	}
 
