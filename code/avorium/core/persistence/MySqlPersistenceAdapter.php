@@ -380,7 +380,7 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
 					$rowvalues[] = 'NULL';
 				} else if (is_bool($row[$i])) {
 					$rowvalues[] = $row[$i] ? 1 : 0;
-				} else if (is_numeric($row[$i])) {
+				} else if (is_int($row[$i]) || is_float($row[$i])) { // Do not use is_numeric() here, because strings containing numbers would then not be handled as strings
 					$rowvalues[] = $row[$i];
 				} else if (is_string($row[$i])) {
 					$rowvalues[] = '\''.$this->escape($row[$i]).'\'';

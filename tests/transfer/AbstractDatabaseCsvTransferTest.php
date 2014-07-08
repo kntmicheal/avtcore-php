@@ -118,17 +118,21 @@ abstract class test_remote_AbstractDatabaseCsvTransferTest extends PHPUnit_Frame
 			$datatabletostore->setCellValue($i, 1, $records[$i]['string']);
 		}
 		$this->getPersistenceAdapter()->saveDataTable('POTEST', $datatabletostore);
+		$datamatrixtostore = $datatabletostore->getDataMatrix();
+		$headerstostore = $datatabletostore->getHeaders();
 		// Pull from remote server
 		$query = "select UUID, STRING_VALUE from POTEST order by UUID";
 		$datatablefromserver = avorium_core_transfer_DatabaseCsvTransfer::pullDataTableFromRemoteServer($this->testendpoint, $query);
+		$datamatrixfromserver = $datatablefromserver->getDataMatrix();
+		$headersfromserver = $datatablefromserver->getHeaders();
 		// Compare contents
-		$this->assertEquals(count($datatabletostore->getHeaders()), count($datatablefromserver->getHeaders()), 'Column count do not match.');
-		$this->assertEquals(count($datatabletostore->getDataMatrix()), count($datatablefromserver->getDataMatrix()), 'Row count do not match.');
-		$this->assertEquals($datatabletostore->getHeaders()[0], $datatablefromserver->getHeaders()[0], 'Headers UUID do not match.');
-		$this->assertEquals($datatabletostore->getHeaders()[1], $datatablefromserver->getHeaders()[1], 'Headers STRING_VALUE do not match.');
+		$this->assertEquals(count($headerstostore), count($headersfromserver), 'Column count do not match.');
+		$this->assertEquals(count($datamatrixtostore), count($datamatrixfromserver), 'Row count do not match.');
+		$this->assertEquals($headerstostore[0], $headersfromserver[0], 'Headers UUID do not match.');
+		$this->assertEquals($headerstostore[1], $headersfromserver[1], 'Headers STRING_VALUE do not match.');
 		for ($i = 0; $i < count($records); $i++) {
-			$this->assertEquals($datatabletostore->getDataMatrix()[$i][0], $datatablefromserver->getDataMatrix()[$i][0], 'UUID do not match in row '.$i);
-			$this->assertEquals($datatabletostore->getDataMatrix()[$i][1], $datatablefromserver->getDataMatrix()[$i][1], 'STRING_VALUE do not match in row '.$i);
+			$this->assertEquals($datamatrixtostore[$i][0], $datamatrixfromserver[$i][0], 'UUID do not match in row '.$i);
+			$this->assertEquals($datamatrixtostore[$i][1], $datamatrixfromserver[$i][1], 'STRING_VALUE do not match in row '.$i);
 		}
 	}
 
@@ -137,6 +141,7 @@ abstract class test_remote_AbstractDatabaseCsvTransferTest extends PHPUnit_Frame
 	 */
 	public function testPullDataTableFromRemoteServerBigDataTable() {
 		// Prepare database
+		$records = array();
 		$recordcount = 10 * 1000;
 		for ($i = 0; $i < $recordcount; $i++) {
 			$records[] = ['UUID' => 'uuid1tRMR'.str_pad($i, 10, '0', STR_PAD_LEFT), 'string' => '°!"§$%&/()=?`*\'>; :_+öä#<,.-²³¼¹½¬{[]}\\¸~’–…·|@\t\r\n'.$i];
@@ -149,17 +154,21 @@ abstract class test_remote_AbstractDatabaseCsvTransferTest extends PHPUnit_Frame
 			$datatabletostore->setCellValue($i, 1, $records[$i]['string']);
 		}
 		$this->getPersistenceAdapter()->saveDataTable('POTEST', $datatabletostore);
+		$datamatrixtostore = $datatabletostore->getDataMatrix();
+		$headerstostore = $datatabletostore->getHeaders();
 		// Pull from remote server
 		$query = "select UUID, STRING_VALUE from POTEST order by UUID";
 		$datatablefromserver = avorium_core_transfer_DatabaseCsvTransfer::pullDataTableFromRemoteServer($this->testendpoint, $query);
+		$datamatrixfromserver = $datatablefromserver->getDataMatrix();
+		$headersfromserver = $datatablefromserver->getHeaders();
 		// Compare contents
-		$this->assertEquals(count($datatabletostore->getHeaders()), count($datatablefromserver->getHeaders()), 'Column count do not match.');
-		$this->assertEquals(count($datatabletostore->getDataMatrix()), count($datatablefromserver->getDataMatrix()), 'Row count do not match.');
-		$this->assertEquals($datatabletostore->getHeaders()[0], $datatablefromserver->getHeaders()[0], 'Headers UUID do not match.');
-		$this->assertEquals($datatabletostore->getHeaders()[1], $datatablefromserver->getHeaders()[1], 'Headers STRING_VALUE do not match.');
+		$this->assertEquals(count($headerstostore), count($headersfromserver), 'Column count do not match.');
+		$this->assertEquals(count($datamatrixtostore), count($datamatrixfromserver), 'Row count do not match.');
+		$this->assertEquals($headerstostore[0], $headersfromserver[0], 'Headers UUID do not match.');
+		$this->assertEquals($headerstostore[1], $headersfromserver[1], 'Headers STRING_VALUE do not match.');
 		for ($i = 0; $i < $recordcount; $i++) {
-			$this->assertEquals($datatabletostore->getDataMatrix()[$i][0], $datatablefromserver->getDataMatrix()[$i][0], 'UUID do not match in row '.$i);
-			$this->assertEquals($datatabletostore->getDataMatrix()[$i][1], $datatablefromserver->getDataMatrix()[$i][1], 'STRING_VALUE do not match in row '.$i);
+			$this->assertEquals($datamatrixtostore[$i][0], $datamatrixfromserver[$i][0], 'UUID do not match in row '.$i);
+			$this->assertEquals($datamatrixtostore[$i][1], $datamatrixfromserver[$i][1], 'STRING_VALUE do not match in row '.$i);
 		}
 	}
 

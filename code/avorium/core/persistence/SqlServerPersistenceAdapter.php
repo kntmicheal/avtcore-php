@@ -395,7 +395,7 @@ class avorium_core_persistence_SqlServerPersistenceAdapter extends avorium_core_
 					$rowselects[] = 'NULL AS '.$escapedheadernames[$i];
 				} else if (is_bool($row[$i])) {
 					$rowselects[] = ($row[$i] ? 1 : 0).' AS '.$escapedheadernames[$i];
-				} else if (is_numeric($row[$i])) {
+				} else if (is_int($row[$i]) || is_float($row[$i])) { // Do not use is_numeric() here, because strings containing numbers would then not be handled as strings
 					$rowselects[] = $row[$i].' AS '.$escapedheadernames[$i];
 				} else if (is_string($row[$i])) {
 					$rowselects[] = '\''.$this->escape($row[$i]).'\' AS '.$escapedheadernames[$i];

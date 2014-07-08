@@ -1194,7 +1194,7 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
         $records = [
             ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testGetDataTable 1'],
             ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testGetDataTable 2'],
-            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testGetDataTable 3']
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => '3'] // Try to give a number as string, should go as string into the database
         ];
 		// Create datatable and store it into the database
 		$datatable = new avorium_core_data_DataTable(3, 4);

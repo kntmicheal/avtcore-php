@@ -416,7 +416,7 @@ class avorium_core_persistence_OraclePersistenceAdapter extends avorium_core_per
 					$rowselects[] = 'NULL '.$escapedheadernames[$i];
 				} else if (is_bool($row[$i])) {
 					$rowselects[] = ($row[$i] ? 1 : 0).' '.$escapedheadernames[$i];
-				} else if (is_numeric($row[$i])) {
+				} else if (is_int($row[$i]) || is_float($row[$i])) { // Do not use is_numeric() here, because strings containing numbers would then not be handled as strings
 					if ($columns[$escapedheadernames[$i]] === 'BINARY_DOUBLE') { // Double must be handled separately in ORACLE
 						$rowselects[] = 'to_binary_double(\''.$row[$i].'\') '.$escapedheadernames[$i];
 					} else {
