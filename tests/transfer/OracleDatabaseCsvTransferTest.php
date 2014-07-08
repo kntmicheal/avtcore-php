@@ -33,20 +33,15 @@ require_once dirname(__FILE__).'/AbstractDatabaseCsvTransferTest.php';
  */
 class test_remote_OracleDatabaseCsvTransferTest extends test_remote_AbstractDatabaseCsvTransferTest {
 	
-	protected $serverhandle;
-	protected $serverpipes;
-	protected $serverpid;
-	
 	protected function prepareLocalConfigFile($filename) {
 		$config = "<?php\n"
 				."require_once dirname(__FILE__).'/code/avorium/core/persistence/OraclePersistenceAdapter.php';\n"
 				.'$GLOBALS[\'PersistenceAdapter\'] = new avorium_core_persistence_OraclePersistenceAdapter(\''.$GLOBALS['TEST_ORACLE_DB_HOST'].'\', \''.$GLOBALS['TEST_ORACLE_DB_USERNAME'].'\', \''.$GLOBALS['TEST_ORACLE_DB_PASSWORD'].'\', \''.$GLOBALS['TEST_ORALCE_NLS_LANG'].'\');';
 		file_put_contents($filename, $config);
 	}
-		
 	
     /**
-     * Defines the MySQL persistence adapter to be used and prepares the
+     * Defines the persistence adapter to be used and prepares the
      * database (cleans tables).
      */
     protected function setUp() {

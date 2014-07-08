@@ -168,12 +168,12 @@ class avorium_core_persistence_SqlServerPersistenceAdapter extends avorium_core_
     public function updateOrCreateTable($persistentobjectclass) {
         $metaData = avorium_core_persistence_helper_Annotation::getPersistableMetaData($persistentobjectclass);
         $tableName = $this->escapeTableOrColumnName($metaData['name']);
-        // Erst mal gucken, ob die Tabelle existiert
+        // Check whether the table exists
         if (count($this->executeMultipleResultQuery('SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = \''.$tableName.'\'')) < 1) {
-            // Tabelle existiert noch nicht, also anlegen
+            // Table does not exist, create it from scratch
             $this->createTable($metaData['properties'], $tableName);
         } else {
-            // Tabelle existiert, Spalten auf Vorhandensein prüfen
+            // Table exists, append new columns
             $this->updateTable($metaData['properties'], $tableName);
         }
     }
@@ -345,8 +345,16 @@ class avorium_core_persistence_SqlServerPersistenceAdapter extends avorium_core_
 		if (!is_a($datatable, 'avorium_core_data_DataTable')) {
 			throw new Exception('Data table is not of correct datatype.');
 		}
-		// Process data table
+		// Obtain primary key from database
 		$escapedtablename = $this->escapeTableOrColumnName($tablename);
+		$primarykeys = $this->executeMultipleResultQuery('select COLUMN_NAME from INFORMATION_SCHEMA.KEY_COLUMN_USAGE where OBJECTPROPERTY(OBJECT_ID(constraint_name), \'IsPrimaryKey\') = 1 and TABLE_NAME=\''.$escapedtablename.'\'');
+		if (count($primarykeys) < 1) {
+			throw new Exception('Invalid table name given: '.$tablename);
+		}
+		// Currently only one primary key is supported, get its column name
+		$primarykeycolumnname = $primarykeys[0]->COLUMN_NAME;
+		$primarykeycolumnfound = false;
+		// Process data table
 		$headernames = $datatable->getHeaders();
 		$escapedheadernames = array();
 		$columncount = count($headernames);
@@ -359,14 +367,6 @@ class avorium_core_persistence_SqlServerPersistenceAdapter extends avorium_core_
         $insertcolumns = array();
 		$insertvalues = array();
         $updates = array();
-		// Obtain primary key from database
-		$primarykeys = $this->executeMultipleResultQuery('select COLUMN_NAME from INFORMATION_SCHEMA.KEY_COLUMN_USAGE where OBJECTPROPERTY(OBJECT_ID(constraint_name), \'IsPrimaryKey\') = 1 and TABLE_NAME=\''.$escapedtablename.'\'');
-		if (count($primarykeys) < 1) {
-			throw new Exception('Invalid table name given: '.$tablename);
-		}
-		// Currently only one primary key is supported, get its column name
-		$primarykeycolumnname = $primarykeys[0]->COLUMN_NAME;
-		$primarykeycolumnfound = false;
 		foreach ($headernames as $headername) {
 			if ($headername === null) {
 				throw new Exception('The header name is null but must not be.');
@@ -405,7 +405,7 @@ class avorium_core_persistence_SqlServerPersistenceAdapter extends avorium_core_
 			}
 			$selects[] = 'SELECT '.implode(',', $rowselects);
 		}
-		$query = 'MERGE INTO '.$escapedtablename.' AS T USING ('.implode(' UNION ALL ', $selects).') AS S ON (T.UUID = S.UUID) WHEN MATCHED THEN UPDATE SET '.implode(',', $updates).' WHEN NOT MATCHED THEN INSERT ('.implode(',', $insertcolumns).') VALUES ('.implode(',', $insertvalues).');';
+		$query = 'MERGE INTO '.$escapedtablename.' AS T USING ('.implode(' UNION ALL ', $selects).') AS S ON (T.'.$primarykeycolumnname.' = S.'.$primarykeycolumnname.') WHEN MATCHED THEN UPDATE SET '.implode(',', $updates).' WHEN NOT MATCHED THEN INSERT ('.implode(',', $insertcolumns).') VALUES ('.implode(',', $insertvalues).');';
         $this->executeNoResultQuery($query);
 	}
 

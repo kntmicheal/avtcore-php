@@ -212,14 +212,14 @@ class avorium_core_persistence_OraclePersistenceAdapter extends avorium_core_per
 	public function updateOrCreateTable($persistentobjectclass) {
         $metaData = avorium_core_persistence_helper_Annotation::getPersistableMetaData($persistentobjectclass);
         $tableName = $this->escapeTableOrColumnName(strtoupper($metaData['name']));
-        // Erst mal gucken, ob die Tabelle existiert
+        // Check whether the table exists
 		$query = 'SELECT * FROM USER_TABLES WHERE UPPER(TABLE_NAME)=\''.$tableName.'\'';
 		$result = $this->executeMultipleResultQuery($query);
         if (count($result) < 1) {
-            // Tabelle existiert noch nicht, also anlegen
+            // Table does not exist, create it from scratch
             $this->createTable($metaData['properties'], $tableName);
         } else {
-            // Tabelle existiert, Spalten auf Vorhandensein prüfen
+            // Table exists, append new columns
             $this->updateTable($metaData['properties'], $tableName);
         }
 	}
@@ -357,8 +357,16 @@ class avorium_core_persistence_OraclePersistenceAdapter extends avorium_core_per
 		oci_execute(oci_parse($this->getDatabase(), 'begin EXECUTE IMMEDIATE \'ALTER SESSION set nls_numeric_characters=".,"\';end;'));
 		// Temporarily set the date format to yyyy-mm-dd hh:ii:ss for the case that we request dates from the database
 		oci_execute(oci_parse($this->getDatabase(), 'begin EXECUTE IMMEDIATE \'ALTER SESSION set nls_date_format="yyyy-mm-dd hh24:mi:ss"\';end;'));
-		// Process data table
+		// Obtain primary key from database
 		$escapedtablename = $this->escapeTableOrColumnName($tablename);
+		$primarykeys = $this->executeMultipleResultQuery('select user_cons_columns.table_name, user_cons_columns.column_name from user_cons_columns join user_constraints on user_constraints.constraint_name = user_cons_columns.constraint_name where user_constraints.constraint_type=\'P\' and user_cons_columns.table_name=\''.$escapedtablename.'\'');
+		if (count($primarykeys) < 1) {
+			throw new Exception('Invalid table name given: '.$tablename);
+		}
+		// Currently only one primary key is supported, get its column name
+		$primarykeycolumnname = $primarykeys[0]->COLUMN_NAME;
+		$primarykeycolumnfound = false;
+		// Process data table
 		$headernames = $datatable->getHeaders();
 		$escapedheadernames = array();
 		$columncount = count($headernames);
@@ -371,14 +379,6 @@ class avorium_core_persistence_OraclePersistenceAdapter extends avorium_core_per
         $insertcolumns = array();
 		$insertvalues = array();
         $updates = array();
-		// Obtain primary key from database
-		$primarykeys = $this->executeMultipleResultQuery('select user_cons_columns.table_name, user_cons_columns.column_name from user_cons_columns join user_constraints on user_constraints.constraint_name = user_cons_columns.constraint_name where user_constraints.constraint_type=\'P\' and user_cons_columns.table_name=\''.$escapedtablename.'\'');
-		if (count($primarykeys) < 1) {
-			throw new Exception('Invalid table name given: '.$tablename);
-		}
-		// Currently only one primary key is supported, get its column name
-		$primarykeycolumnname = $primarykeys[0]->COLUMN_NAME;
-		$primarykeycolumnfound = false;
 		foreach ($headernames as $headername) {
 			if ($headername === null) {
 				throw new Exception('The header name is null but must not be.');
@@ -428,7 +428,7 @@ class avorium_core_persistence_OraclePersistenceAdapter extends avorium_core_per
 			}
 			$selects[] = 'SELECT '.implode(',', $rowselects).' FROM DUAL';
 		}
-		$query = 'MERGE INTO '.$escapedtablename.' T USING ('.implode(' UNION ALL ', $selects).') S ON (T.UUID = S.UUID) WHEN MATCHED THEN UPDATE SET '.implode(',', $updates).' WHEN NOT MATCHED THEN INSERT ('.implode(',', $insertcolumns).') VALUES ('.implode(',', $insertvalues).')';
+		$query = 'MERGE INTO '.$escapedtablename.' T USING ('.implode(' UNION ALL ', $selects).') S ON (T.'.$primarykeycolumnname.' = S.'.$primarykeycolumnname.') WHEN MATCHED THEN UPDATE SET '.implode(',', $updates).' WHEN NOT MATCHED THEN INSERT ('.implode(',', $insertcolumns).') VALUES ('.implode(',', $insertvalues).')';
         $this->executeNoResultQuery($query);
 	}
 

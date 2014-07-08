@@ -32,11 +32,7 @@ require_once dirname(__FILE__).'/AbstractDatabaseCsvTransferTest.php';
  * functions based on MS SQL server database on the remote host.
  */
 class test_remote_SqlServerDatabaseCsvTransferTest extends test_remote_AbstractDatabaseCsvTransferTest {
-	
-	protected $serverhandle;
-	protected $serverpipes;
-	protected $serverpid;
-	
+		
 	protected function prepareLocalConfigFile($filename) {
 		$config = "<?php\n"
 				."require_once dirname(__FILE__).'/code/avorium/core/persistence/SqlServerPersistenceAdapter.php';\n"
@@ -45,7 +41,7 @@ class test_remote_SqlServerDatabaseCsvTransferTest extends test_remote_AbstractD
 	}
 		
     /**
-     * Defines the MySQL persistence adapter to be used and prepares the
+     * Defines the persistence adapter to be used and prepares the
      * database (cleans tables).
      */
     protected function setUp() {

@@ -33,10 +33,10 @@ require_once dirname(__FILE__).'/../../code/avorium/core/transfer/DatabaseCsvTra
  */
 abstract class test_remote_AbstractDatabaseCsvTransferTest extends PHPUnit_Framework_TestCase {
 	
-	private $serverhandle; // CURL handle
-	private $serverpipes; // CURL pipes
-	private $serverpid; // Process id of the webserver
-	private $testendpoint; // URL of the tes endpoint on the webserver
+	protected $serverhandle; // CURL handle
+	protected $serverpipes; // CURL pipes
+	protected $serverpid; // Process id of the webserver
+	protected $testendpoint; // URL of the tes endpoint on the webserver
 	
 	/**
 	 * Derived classes must create a localconfig.php file in the directory

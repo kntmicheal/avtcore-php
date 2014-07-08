@@ -165,12 +165,12 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
     public function updateOrCreateTable($persistentobjectclass) {
         $metaData = avorium_core_persistence_helper_Annotation::getPersistableMetaData($persistentobjectclass);
         $tableName = $this->escapeTableOrColumnName($metaData['name']);
-        // Erst mal gucken, ob die Tabelle existiert
+        // Check whether the table exists
         if (count($this->executeMultipleResultQuery('show tables like \''.$tableName.'\'')) < 1) {
-            // Tabelle existiert noch nicht, also anlegen
+            // Table does not exist, create it from scratch
             $this->createTable($metaData['properties'], $tableName);
         } else {
-            // Tabelle existiert, Spalten auf Vorhandensein prüfen
+            // Table exists, append new columns
             $this->updateTable($metaData['properties'], $tableName);
         }
     }
@@ -330,8 +330,18 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
 		if (!is_a($datatable, 'avorium_core_data_DataTable')) {
 			throw new Exception('Data table is not of correct datatype.');
 		}
-		// Process data table
+		// Obtain primary key from database
 		$escapedtablename = $this->escapeTableOrColumnName($tablename);
+		try {
+			$primarykeys = $this->executeMultipleResultQuery('SHOW KEYS FROM '.$escapedtablename.' WHERE KEY_NAME = \'PRIMARY\'');
+		} catch (Exception $ex) {
+			// Happens when the table name is invalid
+			throw new Exception('Invalid table name given: '.$tablename, null, $ex);
+		}
+		// Currently only one primary key is supported, get its column name
+		$primarykeycolumnname = $primarykeys[0]->Column_name;
+		$primarykeycolumnfound = false;
+		// Process data table
 		$headernames = $datatable->getHeaders();
 		$columncount = count($headernames);
 		$datamatrix = $datatable->getDataMatrix();
@@ -342,16 +352,6 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
         $inserts = array();
         $values = array();
         $updates = array();
-		// Obtain primary key from database
-		try {
-			$primarykeys = $this->executeMultipleResultQuery('SHOW KEYS FROM '.$escapedtablename.' WHERE KEY_NAME = \'PRIMARY\'');
-		} catch (Exception $ex) {
-			// Happens when the table name is invalid
-			throw new Exception('Invalid table name given: '.$tablename, null, $ex);
-		}
-		// Currently only one primary key is supported, get its column name
-		$primarykeycolumnname = $primarykeys[0]->Column_name;
-		$primarykeycolumnfound = false;
 		foreach ($headernames as $headername) {
 			if ($headername === null) {
 				throw new Exception('The header name is null but must not be.');
