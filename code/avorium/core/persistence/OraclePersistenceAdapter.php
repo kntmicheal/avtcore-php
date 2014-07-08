@@ -371,8 +371,9 @@ class avorium_core_persistence_OraclePersistenceAdapter extends avorium_core_per
 		$escapedheadernames = array();
 		$columncount = count($headernames);
 		$datamatrix = $datatable->getDataMatrix();
+		$rowcount = count($datamatrix);
 		// Ignore empty datatables
-		if (count($datamatrix) < 1) {
+		if ($rowcount < 1) {
 			return;
 		}
         $selects = array();
@@ -406,7 +407,8 @@ class avorium_core_persistence_OraclePersistenceAdapter extends avorium_core_per
 		foreach ($columnsarray as $column) {
 			$columns[$column->COLUMN_NAME] = $column->DATA_TYPE;
 		}
-		foreach ($datamatrix as $row) {
+		for ($j = 0; $j < $rowcount; $j++) {
+			$row = $datamatrix[$j];
 			$rowselects = array();
 			for ($i = 0; $i < $columncount; $i++) {
 				// Distinguish between data types
@@ -427,9 +429,13 @@ class avorium_core_persistence_OraclePersistenceAdapter extends avorium_core_per
 				}
 			}
 			$selects[] = 'SELECT '.implode(',', $rowselects).' FROM DUAL';
+			// Run statement after 100 rows to prevent too long SQL query strings
+			if (($j > 0 && $j % 100 === 0) || ($j === $rowcount - 1)) {
+				$query = 'MERGE INTO '.$escapedtablename.' T USING ('.implode(' UNION ALL ', $selects).') S ON (T.'.$primarykeycolumnname.' = S.'.$primarykeycolumnname.') WHEN MATCHED THEN UPDATE SET '.implode(',', $updates).' WHEN NOT MATCHED THEN INSERT ('.implode(',', $insertcolumns).') VALUES ('.implode(',', $insertvalues).')';
+				$this->executeNoResultQuery($query);
+				$selects = array();
+			}
 		}
-		$query = 'MERGE INTO '.$escapedtablename.' T USING ('.implode(' UNION ALL ', $selects).') S ON (T.'.$primarykeycolumnname.' = S.'.$primarykeycolumnname.') WHEN MATCHED THEN UPDATE SET '.implode(',', $updates).' WHEN NOT MATCHED THEN INSERT ('.implode(',', $insertcolumns).') VALUES ('.implode(',', $insertvalues).')';
-        $this->executeNoResultQuery($query);
 	}
 
 }

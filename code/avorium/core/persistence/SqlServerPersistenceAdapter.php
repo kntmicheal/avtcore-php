@@ -319,8 +319,6 @@ class avorium_core_persistence_SqlServerPersistenceAdapter extends avorium_core_
 					$datatable->setCellValue($rownum, $i, $value);
 				} elseif (is_a($value, 'DateTime')) {
 					$datatable->setCellValue($rownum, $i, $value->format('Y-m-d H:i:s'));
-				} elseif (is_bool($value)) {
-					$datatable->setCellValue($rownum, $i, $value ? '1' : '0');
 				} else {
 					// Numeric and so on
 					$datatable->setCellValue($rownum, $i, ''.$value);
@@ -359,8 +357,9 @@ class avorium_core_persistence_SqlServerPersistenceAdapter extends avorium_core_
 		$escapedheadernames = array();
 		$columncount = count($headernames);
 		$datamatrix = $datatable->getDataMatrix();
+		$rowcount = count($datamatrix);
 		// Ignore empty datatables
-		if (count($datamatrix) < 1) {
+		if ($rowcount < 1) {
 			return;
 		}
         $selects = array();
@@ -387,7 +386,8 @@ class avorium_core_persistence_SqlServerPersistenceAdapter extends avorium_core_
 		if (!$primarykeycolumnfound) {
 			throw new Exception('Expected primary key column '.$primarykeycolumnname.' not found.');
 		}
-		foreach ($datamatrix as $row) {
+		for ($j = 0; $j < $rowcount; $j++) {
+			$row = $datamatrix[$j];
 			$rowselects = array();
 			for ($i = 0; $i < $columncount; $i++) {
 				// Distinguish between data types
@@ -404,9 +404,13 @@ class avorium_core_persistence_SqlServerPersistenceAdapter extends avorium_core_
 				}
 			}
 			$selects[] = 'SELECT '.implode(',', $rowselects);
+			// Run statement after 100 rows to prevent too long SQL query strings
+			if (($j > 0 && $j % 100 === 0) || ($j === $rowcount - 1)) {
+				$query = 'MERGE INTO '.$escapedtablename.' AS T USING ('.implode(' UNION ALL ', $selects).') AS S ON (T.'.$primarykeycolumnname.' = S.'.$primarykeycolumnname.') WHEN MATCHED THEN UPDATE SET '.implode(',', $updates).' WHEN NOT MATCHED THEN INSERT ('.implode(',', $insertcolumns).') VALUES ('.implode(',', $insertvalues).');';
+				$this->executeNoResultQuery($query);
+				$selects = array();
+			}
 		}
-		$query = 'MERGE INTO '.$escapedtablename.' AS T USING ('.implode(' UNION ALL ', $selects).') AS S ON (T.'.$primarykeycolumnname.' = S.'.$primarykeycolumnname.') WHEN MATCHED THEN UPDATE SET '.implode(',', $updates).' WHEN NOT MATCHED THEN INSERT ('.implode(',', $insertcolumns).') VALUES ('.implode(',', $insertvalues).');';
-        $this->executeNoResultQuery($query);
 	}
 
 }

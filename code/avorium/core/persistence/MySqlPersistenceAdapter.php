@@ -345,8 +345,9 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
 		$headernames = $datatable->getHeaders();
 		$columncount = count($headernames);
 		$datamatrix = $datatable->getDataMatrix();
+		$rowcount = count($datamatrix);
 		// Ignore empty datatables
-		if (count($datamatrix) < 1) {
+		if ($rowcount < 1) {
 			return;
 		}
         $inserts = array();
@@ -370,7 +371,8 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
 		if (!$primarykeycolumnfound) {
 			throw new Exception('Expected primary key column '.$primarykeycolumnname.' not found.');
 		}
-		foreach ($datamatrix as $row) {
+		for ($j = 0; $j < $rowcount; $j++) {
+			$row = $datamatrix[$j];
 			$rowvalues = array();
 			for ($i = 0; $i < $columncount; $i++) {
 				// Distinguish between data types
@@ -387,14 +389,18 @@ class avorium_core_persistence_MySqlPersistenceAdapter extends avorium_core_pers
 				}
 			}
 			$values[] = '('.implode(',', $rowvalues).')';
-		}
-        $query = 'INSERT INTO '.$escapedtablename.' ('.implode(',', $inserts).') VALUES '.implode(',', $values).' ON DUPLICATE KEY UPDATE '.implode(',', $updates);
-        $resultset = $this->getDatabase()->query($query);
-        if (!$resultset) { // When false is returned, the query was not successful
-            throw new Exception('Error in query: '.$query);
-        }
-        if (mysqli_warning_count($this->getDatabase()) > 0) {
-			throw new Exception('Error saving to database. Maybe a given string value cannot be parsed into the correct data type');
+			// Run statement after 100 rows to prevent too long SQL query strings
+			if (($j > 0 && $j % 100 === 0) || ($j === $rowcount - 1)) {
+				$query = 'INSERT INTO '.$escapedtablename.' ('.implode(',', $inserts).') VALUES '.implode(',', $values).' ON DUPLICATE KEY UPDATE '.implode(',', $updates);
+				$resultset = $this->getDatabase()->query($query);
+				if (!$resultset) { // When false is returned, the query was not successful
+					throw new Exception('Error in query: '.$query);
+				}
+				if (mysqli_warning_count($this->getDatabase()) > 0) {
+					throw new Exception('Error saving to database. Maybe a given string value cannot be parsed into the correct data type');
+				}
+				$values = array();
+			}
 		}
 	}
 
