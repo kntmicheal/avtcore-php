@@ -43,6 +43,13 @@ require_once dirname(__FILE__).'/../../code/avorium/core/data/DataTable.php';
  */
 abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_Framework_TestCase {
 	
+	/**
+	 * Enable garbage collection for the tests to preserve memory
+	 */
+	public static function setUpBeforeClass() {
+		parent::setUpBeforeClass();
+		gc_enable();
+	}
 	
 	/**
 	 * Derived test classes must do the following steps:
@@ -59,6 +66,15 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
 	 */
 	protected function setUp() {
         parent::setUp();
+	}
+	
+	/**
+	 * Forces the garbage collector to clean up after each test to preserve 
+	 * memory.
+	 */
+	protected function tearDown() {
+		gc_collect_cycles();
+		parent::tearDown();
 	}
 
     // Positive tests
@@ -1178,7 +1194,7 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
         $records = [
             ['UUID' => 'uuid1tRMR1', 'bool' => false, 'int' => 10, 'string' => 'testGetDataTable 1'],
             ['UUID' => 'uuid1tRMR2', 'bool' => true, 'int' => 20, 'string' => 'testGetDataTable 2'],
-            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => 'testGetDataTable 3']
+            ['UUID' => 'uuid1tRMR3', 'bool' => false, 'int' => 30, 'string' => '3'] // Try to give a number as string, should go as string into the database
         ];
 		// Create datatable and store it into the database
 		$datatable = new avorium_core_data_DataTable(3, 4);
@@ -1689,6 +1705,43 @@ abstract class test_persistence_AbstractPersistenceAdapterTest extends PHPUnit_F
 		}
 	}
 
+	/**
+	 * When saving a datatable with more then 10 rows the database upserts
+	 * need to be split into multiple statements, otherwise the sql statement
+	 * can get too long.
+	 */
+	public function testSaveDataTableBigDataTable() {
+		$records = array();
+		$recordcount = 10 * 1000;
+		for ($i = 0; $i < $recordcount; $i++) {
+			$records[] = ['UUID' => 'uuid1tRMR'.str_pad($i, 10, '0', STR_PAD_LEFT), 'bool' => $i % 2 === 0, 'int' => $i * 10, 'string' => 'testGetDataTable '.$i];
+		}
+		// Create datatable and store it into the database
+		$datatable = new avorium_core_data_DataTable($recordcount, 4);
+		$datatable->setHeader(0, 'UUID');
+		$datatable->setHeader(1, 'BOOLEAN_VALUE');
+		$datatable->setHeader(2, 'INT_VALUE');
+		$datatable->setHeader(3, 'STRING_VALUE');
+		for ($i = 0; $i < $recordcount; $i++) {
+			$datatable->setCellValue($i, 0, $records[$i]['UUID']);
+			$datatable->setCellValue($i, 1, $records[$i]['bool']);
+			$datatable->setCellValue($i, 2, $records[$i]['int']);
+			$datatable->setCellValue($i, 3, $records[$i]['string']);
+		}
+		$this->getPersistenceAdapter()->saveDataTable('POTEST', $datatable);
+		// Read the records via SQL and check their contents.
+		// Let them return the results ordered. Mybe the persistence adapter 
+		// uses bulk save methods which store the records in a different order
+		$result = $this->executeQuery('select UUID, BOOLEAN_VALUE, INT_VALUE, STRING_VALUE from POTEST order by UUID');
+		$this->assertEquals($recordcount, count($result), 'Wrong row count');
+		for ($i = 0; $i < $recordcount; $i++) {
+			$this->assertEquals($records[$i]['UUID'], $result[$i]['UUID'], 'UUID from database is not as expected.');
+			$this->assertEquals($records[$i]['bool']?1:0, $result[$i]['BOOLEAN_VALUE'], 'Boolean value from database is not as expected.');
+			$this->assertEquals($records[$i]['int'], $result[$i]['INT_VALUE'], 'Integer value from database is not as expected.');
+			$this->assertEquals($records[$i]['string'], $result[$i]['STRING_VALUE'], 'String value from database is not as expected.');
+		}
+	}
+	
 	/**
 	 * Tests the correct conversion of boolean datatypes into strings when
 	 * reading from database and putting the data into a datatable.
