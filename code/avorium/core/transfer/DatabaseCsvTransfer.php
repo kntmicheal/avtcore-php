@@ -50,7 +50,8 @@ class avorium_core_transfer_DatabaseCsvTransfer {
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		if ($postcontent !== null) {
 			curl_setopt($ch, CURLOPT_POST, true);
-			curl_setopt($ch, CURLOPT_POSTFIELDS, $postcontent); 
+			curl_setopt($ch, CURLOPT_POSTFIELDS, $postcontent);
+			curl_setopt($ch, CURLOPT_TIMEOUT, 300); // Bis zu 5 Minuten Timeout abwarten
 			curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: text/plain')); 
 		}
 		$response = curl_exec($ch);
@@ -92,6 +93,9 @@ class avorium_core_transfer_DatabaseCsvTransfer {
 			$datatable = avorium_core_data_CsvParser::convertCsvToDataTable($response);
 			return $datatable;
 		}
+		// The following can happen, when the server reports an error. This may be:
+		// - Script timeout when connecting via CURL in the doRequest() function
+		// - Out-Of-Memory on the server (server PHP script  needs more memory)
 		throw new Exception('Cannot connect to the remote endpoint.');
 	}
 }
