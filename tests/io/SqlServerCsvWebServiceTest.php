@@ -51,7 +51,7 @@ class test_io_SqlServerCsvWebServiceTest extends test_io_AbstractCsvWebServiceTe
                 $this->password
             );
         // Clean database tables by recreating them
-        $this->persistenceAdapter->executeNoResultQuery('drop table POTEST');
+        $this->persistenceAdapter->executeNoResultQuery('if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = \'POTEST\') drop table POTEST');
         $this->persistenceAdapter->executeNoResultQuery('CREATE TABLE POTEST ('
 				. 'UUID VARCHAR(40) NOT NULL, '
 				. 'STRING_VALUE_1 VARCHAR(255), '
