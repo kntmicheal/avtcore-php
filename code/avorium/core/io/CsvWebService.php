@@ -149,7 +149,6 @@ class avorium_core_io_CsvWebService {
 			default:
 				throw new Exception('Unknown action: "'.$action.'"');
 		}
-		throw new Exception('Not implemented');
 	}
 	
 	/**
